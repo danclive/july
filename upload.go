@@ -22,8 +22,17 @@ type Upload struct {
 	onConnect func(Crate, *Upload)
 }
 
-func newUpload(crate Crate, addrs []string, clientId, user, pass string, onConnect func(Crate, *Upload), debug bool) *Upload {
-	if debug {
+type UploadConfig struct {
+	Addrs     []string
+	ClientId  string
+	User      string
+	Pass      string
+	OnConnect func(Crate, *Upload)
+	Debug     bool
+}
+
+func newUpload(crate Crate, config UploadConfig) *Upload {
+	if config.Debug {
 		mqtt.DEBUG = log.New(os.Stdout, "", log.LstdFlags)
 		mqtt.ERROR = log.New(os.Stdout, "", log.LstdFlags)
 		mqtt.WARN = log.New(os.Stdout, "", log.LstdFlags)
@@ -31,17 +40,17 @@ func newUpload(crate Crate, addrs []string, clientId, user, pass string, onConne
 
 	options := mqtt.NewClientOptions()
 
-	if len(addrs) == 0 {
+	if len(config.Addrs) == 0 {
 		options.AddBroker("127.0.0.1:1883")
 	} else {
-		for i := 0; i < len(addrs); i++ {
-			options.AddBroker(addrs[i])
+		for i := 0; i < len(config.Addrs); i++ {
+			options.AddBroker(config.Addrs[i])
 		}
 	}
 
-	options.SetClientID(clientId)
-	options.SetUsername(user)
-	options.SetPassword(pass)
+	options.SetClientID(config.ClientId)
+	options.SetUsername(config.User)
+	options.SetPassword(config.Pass)
 	options.SetMaxReconnectInterval(time.Second * 30)
 
 	client := mqtt.NewClient(options)
@@ -50,7 +59,7 @@ func newUpload(crate Crate, addrs []string, clientId, user, pass string, onConne
 		crate:     crate,
 		client:    client,
 		close:     make(chan struct{}),
-		onConnect: onConnect,
+		onConnect: config.OnConnect,
 	}
 
 	return upload

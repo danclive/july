@@ -1,6 +1,9 @@
 package july
 
 import (
+	"errors"
+
+	"github.com/danclive/queen-go/conn"
 	"go.etcd.io/bbolt"
 	"go.uber.org/zap"
 )
@@ -22,6 +25,7 @@ type Crate interface {
 	MqttService() *MqttService
 	Store() *Store
 	Upload() *Upload
+	Queen() *QueenService
 	Run() error
 	Stop() error
 }
@@ -36,27 +40,25 @@ type crate struct {
 	mqttService *MqttService
 	store       *Store
 	upload      *Upload
+	queen       *QueenService
 	close       chan struct{}
 	option      Options
 }
 
 type Options struct {
-	Log                   *zap.Logger
-	ConfigDBPath          string
-	BboltDBPath           string
-	CollectReadInterval   int
-	CollectKeepalive      int
-	HisStoreEnable        bool
-	HisStorePath          string
-	MqttTcpAddrs          []string
-	MqttWsAddrs           []string
-	UploadEnable          bool
-	UploadAddrs           []string
-	UploadClientId        string
-	UploadUser            string
-	UploadPass            string
-	UploadOnConnect       func(Crate, *Upload)
-	UploadMqttClientDebug bool
+	Log                 *zap.Logger
+	ConfigDBPath        string
+	BboltDBPath         string
+	CollectReadInterval int
+	CollectKeepalive    int
+	HisStoreEnable      bool
+	HisStorePath        string
+	MqttTcpAddrs        []string
+	MqttWsAddrs         []string
+	UploadEnable        bool
+	UploadConfig        *UploadConfig
+	QueenEnable         bool
+	QueenConfig         *conn.Config
 }
 
 func NewCrate(options Options) (Crate, error) {
@@ -92,12 +94,16 @@ func NewCrate(options Options) (Crate, error) {
 		options.MqttWsAddrs = []string{":8084"}
 	}
 
-	if len(options.UploadAddrs) == 0 {
-		options.UploadAddrs = []string{"127.0.0.1:1883"}
+	if options.UploadEnable && options.UploadConfig == nil {
+		return nil, errors.New("UploadConfig cannot be nil")
 	}
 
-	if options.UploadOnConnect == nil {
-		options.UploadOnConnect = readyDataSync
+	// if options.UploadEnable {
+	// 	options.UploadConfig.OnConnect = readyDataSync
+	// }
+
+	if options.QueenEnable && options.QueenConfig == nil {
+		return nil, errors.New("QueenConfig cannot be nil")
 	}
 
 	zaplog = options.Log
@@ -158,15 +164,22 @@ func NewCrate(options Options) (Crate, error) {
 	crate.store = his
 
 	// upload
-	crate.upload = newUpload(
-		crate,
-		options.UploadAddrs,
-		options.UploadClientId,
-		options.UploadUser,
-		options.UploadPass,
-		options.UploadOnConnect,
-		options.UploadMqttClientDebug,
-	)
+	if options.UploadEnable {
+		crate.upload = newUpload(
+			crate,
+			*options.UploadConfig,
+		)
+	}
+
+	// queen
+	if options.QueenEnable {
+		c, err := newQueenService(crate, *options.QueenConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		crate.queen = c
+	}
 
 	return crate, nil
 }
@@ -203,6 +216,10 @@ func (c *crate) Upload() *Upload {
 	return c.upload
 }
 
+func (c *crate) Queen() *QueenService {
+	return c.queen
+}
+
 func (c *crate) Run() error {
 
 	c.collect.Run()
@@ -217,6 +234,10 @@ func (c *crate) Run() error {
 		c.upload.run()
 	}
 
+	if c.option.QueenEnable {
+		c.queen.run()
+	}
+
 	return nil
 }
 
@@ -229,6 +250,10 @@ func (c *crate) Stop() error {
 	}
 
 	var err error
+
+	if c.option.QueenEnable {
+		c.queen.stop()
+	}
 
 	if c.option.UploadEnable {
 		if err2 := c.upload.stop(); err2 != nil {

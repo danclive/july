@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/danclive/mqtt"
-	"github.com/danclive/mqtt/ext"
 )
 
 type MqttService struct {
@@ -27,7 +26,7 @@ func newMqttService(crate Crate, tcpAddrs []string, wsAddrs []string) (*MqttServ
 	server := mqtt.NewServer(
 		mqtt.WithHook(hook(crate)),
 		mqtt.WithPlugin(&MqttRecv{crate: crate}),
-		mqtt.WithPlugin(ext.NewMqttCall(zaplog)),
+		//mqtt.WithPlugin(ext.NewMqttCall(zaplog)),
 		mqtt.WithLogger(zaplog),
 	)
 

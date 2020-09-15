@@ -1,0 +1,58 @@
+package july
+
+import (
+	"github.com/danclive/july/dict"
+	"github.com/danclive/nson-go"
+)
+
+func readyDataSync(crate Crate, upload *Upload) {
+	crate.Log().Info("readyDataSync")
+
+	upload.LLacer().Llac(dict.DEV_META, func(recv nson.Message) nson.Message {
+		method, err := recv.GetString(dict.METHOD)
+		if err != nil {
+			crate.Log().Errorf("recv.GetString(dict.METHOD): %s", err)
+			return nson.Message{
+				dict.CODE:  nson.I32(400),
+				dict.ERROR: nson.String(err.Error()),
+			}
+		}
+
+		params, err := recv.GetMessage(dict.PARAMS)
+		if err != nil {
+			crate.Log().Errorf("recv.GetMessage(dict.PARAMS): %s", err)
+			return nson.Message{
+				dict.CODE:  nson.I32(400),
+				dict.ERROR: nson.String(err.Error()),
+			}
+		}
+
+		switch method {
+		case "PullSlots":
+			return pullSlots(crate, params, recv)
+		case "PullSlot":
+			return pullSlot(crate, params, recv)
+		case "PullTags":
+			return pullTags(crate, params, recv)
+		case "PullTag":
+			return pullTag(crate, params, recv)
+		case "PushSlots":
+			return pushSlots(crate, params, recv)
+		case "PushSlot":
+			return pushSlot(crate, params, recv)
+		case "DeleteSlot":
+			return deleteSlot(crate, params, recv)
+		case "PushTags":
+			return pushTags(crate, params, recv)
+		case "PushTag":
+			return pushTag(crate, params, recv)
+		case "DeleteTag":
+			return deleteTag(crate, params, recv)
+		default:
+			return nson.Message{
+				dict.CODE:  nson.I32(404),
+				dict.ERROR: nson.String("Not Found"),
+			}
+		}
+	})
+}
