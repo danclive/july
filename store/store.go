@@ -1,4 +1,4 @@
-package july
+package store
 
 import (
 	"errors"
@@ -7,13 +7,39 @@ import (
 	"sync"
 	"time"
 
+	"github.com/danclive/july/log"
+	"github.com/danclive/july/slot"
 	"github.com/danclive/july/util"
 	"xorm.io/xorm"
 )
 
-type Store struct {
-	crate   Crate
-	dbPath  string
+var _service *Service
+var once sync.Once
+
+func InitService(path string) {
+	if !Exist(path) {
+		err := os.Mkdir(path, os.ModePerm)
+		if err != nil {
+			log.Suger.Fatal(err)
+		}
+	}
+
+	s := &Service{
+		path:    path,
+		engines: make(map[string]*xorm.Engine),
+		close:   make(chan struct{}),
+		stopped: false,
+	}
+
+	_service = s
+}
+
+func GetService() *Service {
+	return _service
+}
+
+type Service struct {
+	path    string
 	engines map[string]*xorm.Engine
 	lock    sync.Mutex
 	close   chan struct{}
@@ -29,26 +55,7 @@ func (*DataPoint) TableName() string {
 	return "data"
 }
 
-func newStore(crate Crate, dbPath string) (*Store, error) {
-	if !Exist(dbPath) {
-		err := os.Mkdir(dbPath, os.ModePerm)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	h := &Store{
-		crate:   crate,
-		dbPath:  dbPath,
-		engines: make(map[string]*xorm.Engine),
-		close:   make(chan struct{}),
-		stopped: false,
-	}
-
-	return h, nil
-}
-
-func (s *Store) store() {
+func (s *Service) run() {
 	ticker := time.NewTicker(60 * time.Second)
 
 	for {
@@ -58,18 +65,16 @@ func (s *Store) store() {
 			return
 		case ti := <-ticker.C:
 			func(ti time.Time) {
-				dbus := s.crate.DBus()
-
-				tags, err := s.crate.SlotService().ListTagForHisData()
+				tags, err := slot.GetService().ListTagForHisData()
 				if err != nil {
-					suger.Errorf("SlotService().ListTagForHisData(): %s", err)
+					log.Suger.Errorf("SlotService().ListTagForHisData(): %s", err)
 					return
 				}
 
-				suger.Debugf("Save tags: %v", len(tags))
+				log.Suger.Debugf("Save tags: %v", len(tags))
 
 				for i := 0; i < len(tags); i++ {
-					value, has := dbus.GetValue(tags[i].Name)
+					value, has := slot.GetCache().GetValue(tags[i].Name)
 					if !has {
 						continue
 					}
@@ -85,7 +90,7 @@ func (s *Store) store() {
 
 					err = s.SaveData(tags[i].Name, ti, value2)
 					if err != nil {
-						suger.Errorf("store.SaveData: %s", err)
+						log.Suger.Errorf("Service.SaveData: %s", err)
 						continue
 					}
 				}
@@ -94,7 +99,7 @@ func (s *Store) store() {
 	}
 }
 
-func (s *Store) getEngine(tagName string) (*xorm.Engine, error) {
+func (s *Service) getEngine(tagName string) (*xorm.Engine, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -106,7 +111,7 @@ func (s *Store) getEngine(tagName string) (*xorm.Engine, error) {
 		return engine, nil
 	}
 
-	engine, err := xorm.NewEngine("sqlite3", fmt.Sprintf("%s/%s.db?cache=shared&_journal_mode=WAL", s.dbPath, tagName))
+	engine, err := xorm.NewEngine("sqlite3", fmt.Sprintf("%s/%s.db?cache=shared&_journal_mode=WAL", s.path, tagName))
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +135,7 @@ func (s *Store) getEngine(tagName string) (*xorm.Engine, error) {
 	return engine, nil
 }
 
-func (s *Store) SaveData(tagName string, ti time.Time, value float64) error {
+func (s *Service) SaveData(tagName string, ti time.Time, value float64) error {
 	db, err := s.getEngine(tagName)
 	if err != nil {
 		return err
@@ -146,7 +151,7 @@ func (s *Store) SaveData(tagName string, ti time.Time, value float64) error {
 	return nil
 }
 
-func (s *Store) QueryData(tagName string, start, end time.Time, step int) ([]DataPoint, error) {
+func (s *Service) QueryData(tagName string, start, end time.Time, step int) ([]DataPoint, error) {
 	db, err := s.getEngine(tagName)
 	if err != nil {
 		return nil, err
@@ -168,12 +173,16 @@ func (s *Store) QueryData(tagName string, start, end time.Time, step int) ([]Dat
 	return rows, nil
 }
 
-func (s *Store) run() {
-	zaplog.Info("starting store")
-	go s.store()
+func Run() {
+	once.Do(func() {
+		log.Suger.Info("run store")
+		go _service.run()
+	})
 }
 
-func (s *Store) stop() error {
+func Stop() error {
+	s := _service
+
 	select {
 	case <-s.close:
 		return nil

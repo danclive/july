@@ -1,19 +1,35 @@
-package july
+package sync
 
 import (
 	"encoding/json"
 	"strings"
 
 	"github.com/danclive/july/dict"
+	"github.com/danclive/july/log"
+	slotpkg "github.com/danclive/july/slot"
 	"github.com/danclive/nson-go"
+	"github.com/danclive/queen-go/client"
 )
 
-func handleDevMeta(crate Crate, recv nson.Message) nson.Message {
+func SyncMetadata(_ *client.Client, recv *client.RecvMessage, back *client.SendMessage) {
 	//fmt.Println(recv)
 
+	data, err := recv.Body.GetMessage(dict.DATA)
+	if err != nil {
+		return
+	}
+
+	back2 := syncMetadata(data)
+
+	if back != nil {
+		back.Body().Insert(dict.DATA, back2)
+	}
+}
+
+func syncMetadata(recv nson.Message) nson.Message {
 	method, err := recv.GetString(dict.METHOD)
 	if err != nil {
-		crate.Log().Errorf("recv.GetString(dict.METHOD): %s", err)
+		log.Suger.Errorf("recv.GetString(dict.METHOD): %s", err)
 		return nson.Message{
 			dict.CODE:  nson.I32(400),
 			dict.ERROR: nson.String(err.Error()),
@@ -22,7 +38,7 @@ func handleDevMeta(crate Crate, recv nson.Message) nson.Message {
 
 	params, err := recv.GetMessage(dict.PARAMS)
 	if err != nil {
-		crate.Log().Errorf("recv.GetMessage(dict.PARAMS): %s", err)
+		log.Suger.Errorf("recv.GetMessage(dict.PARAMS): %s", err)
 		return nson.Message{
 			dict.CODE:  nson.I32(400),
 			dict.ERROR: nson.String(err.Error()),
@@ -31,25 +47,25 @@ func handleDevMeta(crate Crate, recv nson.Message) nson.Message {
 
 	switch method {
 	case "PullSlots":
-		return pullSlots(crate, params, recv)
+		return pullSlots(params, recv)
 	case "PullSlot":
-		return pullSlot(crate, params, recv)
+		return pullSlot(params, recv)
 	case "PullTags":
-		return pullTags(crate, params, recv)
+		return pullTags(params, recv)
 	case "PullTag":
-		return pullTag(crate, params, recv)
+		return pullTag(params, recv)
 	case "PushSlots":
-		return pushSlots(crate, params, recv)
+		return pushSlots(params, recv)
 	case "PushSlot":
-		return pushSlot(crate, params, recv)
+		return pushSlot(params, recv)
 	case "DeleteSlot":
-		return deleteSlot(crate, params, recv)
+		return deleteSlot(params, recv)
 	case "PushTags":
-		return pushTags(crate, params, recv)
+		return pushTags(params, recv)
 	case "PushTag":
-		return pushTag(crate, params, recv)
+		return pushTag(params, recv)
 	case "DeleteTag":
-		return deleteTag(crate, params, recv)
+		return deleteTag(params, recv)
 	default:
 		return nson.Message{
 			dict.CODE:  nson.I32(404),
@@ -58,8 +74,8 @@ func handleDevMeta(crate Crate, recv nson.Message) nson.Message {
 	}
 }
 
-func pullSlots(crate Crate, params, recv nson.Message) nson.Message {
-	slots, err := crate.SlotService().ListSlotSimple()
+func pullSlots(params, recv nson.Message) nson.Message {
+	slots, err := slotpkg.GetService().ListSlotSimple()
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -81,7 +97,7 @@ func pullSlots(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func pullSlot(crate Crate, params, recv nson.Message) nson.Message {
+func pullSlot(params, recv nson.Message) nson.Message {
 	slotId, err := params.GetString("slotId")
 	if err != nil {
 		return nson.Message{
@@ -90,7 +106,7 @@ func pullSlot(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot, err := crate.SlotService().GetSlot(slotId)
+	slot, err := slotpkg.GetService().GetSlot(slotId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -119,7 +135,7 @@ func pullSlot(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func pullTags(crate Crate, params, recv nson.Message) nson.Message {
+func pullTags(params, recv nson.Message) nson.Message {
 	slotId, err := params.GetString("slotId")
 	if err != nil {
 		return nson.Message{
@@ -128,7 +144,7 @@ func pullTags(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tags, err := crate.SlotService().ListTagSimple(slotId)
+	tags, err := slotpkg.GetService().ListTagSimple(slotId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -150,7 +166,7 @@ func pullTags(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func pullTag(crate Crate, params, recv nson.Message) nson.Message {
+func pullTag(params, recv nson.Message) nson.Message {
 	tagId, err := params.GetString("tagId")
 	if err != nil {
 		return nson.Message{
@@ -159,7 +175,7 @@ func pullTag(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag, err := crate.SlotService().GetTag(tagId)
+	tag, err := slotpkg.GetService().GetTag(tagId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -188,7 +204,7 @@ func pullTag(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func pushSlots(crate Crate, params, recv nson.Message) nson.Message {
+func pushSlots(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("slots")
 	if err != nil {
 		return nson.Message{
@@ -197,7 +213,7 @@ func pushSlots(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slots := make([]Slot, 0)
+	slots := make([]slotpkg.Slot, 0)
 
 	err = json.Unmarshal(data, &slots)
 	if err != nil {
@@ -208,7 +224,7 @@ func pushSlots(crate Crate, params, recv nson.Message) nson.Message {
 	}
 
 	for i := 0; i < len(slots); i++ {
-		slot, err := crate.SlotService().GetSlot(slots[i].Id)
+		slot, err := slotpkg.GetService().GetSlot(slots[i].Id)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -224,7 +240,7 @@ func pushSlots(crate Crate, params, recv nson.Message) nson.Message {
 			slot.Status = slots[i].Status
 			slot.Order = slots[i].Order
 
-			_, err := crate.SlotService().UpdateSlot(slot)
+			_, err := slotpkg.GetService().UpdateSlot(slot)
 			if err != nil {
 				return nson.Message{
 					dict.CODE:  nson.I32(500),
@@ -236,7 +252,7 @@ func pushSlots(crate Crate, params, recv nson.Message) nson.Message {
 		}
 
 	NEW:
-		slot2 := Slot{
+		slot2 := slotpkg.Slot{
 			Id:     slots[i].Id,
 			Name:   slots[i].Name,
 			Desc:   slots[i].Desc,
@@ -246,10 +262,10 @@ func pushSlots(crate Crate, params, recv nson.Message) nson.Message {
 			Order:  slots[i].Order,
 		}
 
-		_, err = crate.SlotService().CreateSlot(&slot2)
+		_, err = slotpkg.GetService().CreateSlot(&slot2)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = crate.SlotService().DeleteForce(slot2.Id, &slot2)
+				err = slotpkg.GetService().DeleteForce(slot2.Id, &slot2)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -272,7 +288,7 @@ func pushSlots(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func pushSlot(crate Crate, params, recv nson.Message) nson.Message {
+func pushSlot(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("slot")
 	if err != nil {
 		return nson.Message{
@@ -281,7 +297,7 @@ func pushSlot(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot := Slot{}
+	slot := slotpkg.Slot{}
 
 	err = json.Unmarshal(data, &slot)
 	if err != nil {
@@ -291,7 +307,7 @@ func pushSlot(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot2, err := crate.SlotService().GetSlot(slot.Id)
+	slot2, err := slotpkg.GetService().GetSlot(slot.Id)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -307,7 +323,7 @@ func pushSlot(crate Crate, params, recv nson.Message) nson.Message {
 		slot2.Status = slot.Status
 		slot2.Order = slot.Order
 
-		_, err := crate.SlotService().UpdateSlot(slot2)
+		_, err := slotpkg.GetService().UpdateSlot(slot2)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -317,7 +333,7 @@ func pushSlot(crate Crate, params, recv nson.Message) nson.Message {
 	} else {
 
 	NEW:
-		slot3 := Slot{
+		slot3 := slotpkg.Slot{
 			Id:     slot.Id,
 			Name:   slot.Name,
 			Desc:   slot.Desc,
@@ -327,10 +343,10 @@ func pushSlot(crate Crate, params, recv nson.Message) nson.Message {
 			Order:  slot.Order,
 		}
 
-		_, err = crate.SlotService().CreateSlot(&slot3)
+		_, err = slotpkg.GetService().CreateSlot(&slot3)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = crate.SlotService().DeleteForce(slot3.Id, &slot3)
+				err = slotpkg.GetService().DeleteForce(slot3.Id, &slot3)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -353,7 +369,7 @@ func pushSlot(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func deleteSlot(crate Crate, params, recv nson.Message) nson.Message {
+func deleteSlot(params, recv nson.Message) nson.Message {
 	slotId, err := params.GetString("slotId")
 	if err != nil {
 		return nson.Message{
@@ -362,7 +378,7 @@ func deleteSlot(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot, err := crate.SlotService().GetSlot(slotId)
+	slot, err := slotpkg.GetService().GetSlot(slotId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -377,7 +393,7 @@ func deleteSlot(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	err = crate.SlotService().DeleteSlot(slot)
+	err = slotpkg.GetService().DeleteSlot(slot)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -390,7 +406,7 @@ func deleteSlot(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func pushTags(crate Crate, params, recv nson.Message) nson.Message {
+func pushTags(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("tags")
 	if err != nil {
 		return nson.Message{
@@ -399,7 +415,7 @@ func pushTags(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tags := make([]Tag, 0)
+	tags := make([]slotpkg.Tag, 0)
 
 	err = json.Unmarshal(data, &tags)
 	if err != nil {
@@ -410,7 +426,7 @@ func pushTags(crate Crate, params, recv nson.Message) nson.Message {
 	}
 
 	for i := 0; i < len(tags); i++ {
-		tag, err := crate.SlotService().GetTag(tags[i].Id)
+		tag, err := slotpkg.GetService().GetTag(tags[i].Id)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -433,7 +449,7 @@ func pushTags(crate Crate, params, recv nson.Message) nson.Message {
 			tag.Status = tags[i].Status
 			tag.Order = tags[i].Order
 
-			_, err := crate.SlotService().UpdateTag(tag)
+			_, err := slotpkg.GetService().UpdateTag(tag)
 			if err != nil {
 				return nson.Message{
 					dict.CODE:  nson.I32(500),
@@ -445,7 +461,7 @@ func pushTags(crate Crate, params, recv nson.Message) nson.Message {
 		}
 
 	NEW:
-		tag2 := Tag{
+		tag2 := slotpkg.Tag{
 			Id:         tags[i].Id,
 			SlotId:     tags[i].SlotId,
 			Name:       tags[i].Name,
@@ -463,10 +479,10 @@ func pushTags(crate Crate, params, recv nson.Message) nson.Message {
 			Order:      tags[i].Order,
 		}
 
-		_, err = crate.SlotService().CreateTag(&tag2)
+		_, err = slotpkg.GetService().CreateTag(&tag2)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = crate.SlotService().DeleteForce(tag2.Id, &tag2)
+				err = slotpkg.GetService().DeleteForce(tag2.Id, &tag2)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -489,7 +505,7 @@ func pushTags(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func pushTag(crate Crate, params, recv nson.Message) nson.Message {
+func pushTag(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("tag")
 	if err != nil {
 		return nson.Message{
@@ -498,7 +514,7 @@ func pushTag(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag := Tag{}
+	tag := slotpkg.Tag{}
 	err = json.Unmarshal(data, &tag)
 	if err != nil {
 		return nson.Message{
@@ -507,7 +523,7 @@ func pushTag(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag2, err := crate.SlotService().GetTag(tag.Id)
+	tag2, err := slotpkg.GetService().GetTag(tag.Id)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -530,7 +546,7 @@ func pushTag(crate Crate, params, recv nson.Message) nson.Message {
 		tag2.Status = tag.Status
 		tag2.Order = tag.Order
 
-		_, err := crate.SlotService().UpdateTag(tag2)
+		_, err := slotpkg.GetService().UpdateTag(tag2)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -540,7 +556,7 @@ func pushTag(crate Crate, params, recv nson.Message) nson.Message {
 	} else {
 
 	NEW:
-		tag3 := Tag{
+		tag3 := slotpkg.Tag{
 			Id:         tag.Id,
 			SlotId:     tag.SlotId,
 			Name:       tag.Name,
@@ -558,10 +574,10 @@ func pushTag(crate Crate, params, recv nson.Message) nson.Message {
 			Order:      tag.Order,
 		}
 
-		_, err = crate.SlotService().CreateTag(&tag3)
+		_, err = slotpkg.GetService().CreateTag(&tag3)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = crate.SlotService().DeleteForce(tag3.Id, &tag3)
+				err = slotpkg.GetService().DeleteForce(tag3.Id, &tag3)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -584,7 +600,7 @@ func pushTag(crate Crate, params, recv nson.Message) nson.Message {
 	}
 }
 
-func deleteTag(crate Crate, params, recv nson.Message) nson.Message {
+func deleteTag(params, recv nson.Message) nson.Message {
 	tagId, err := params.GetString("tagId")
 	if err != nil {
 		return nson.Message{
@@ -593,7 +609,7 @@ func deleteTag(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag, err := crate.SlotService().GetTag(tagId)
+	tag, err := slotpkg.GetService().GetTag(tagId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -608,7 +624,7 @@ func deleteTag(crate Crate, params, recv nson.Message) nson.Message {
 		}
 	}
 
-	err = crate.SlotService().DeleteTag(tag)
+	err = slotpkg.GetService().DeleteTag(tag)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),

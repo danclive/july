@@ -1,29 +1,25 @@
-package july
+package slot
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"sync"
 	"time"
 
-	"github.com/danclive/july/dict"
-	"github.com/danclive/july/util"
-	"github.com/danclive/mqtt"
-	"github.com/danclive/nson-go"
+	"github.com/danclive/july/consts"
+	"github.com/danclive/july/log"
 )
 
-type Collect interface {
-	Reset(slotId string)
-	Write(tags []Tag) error
-	Run()
-	Stop() error
+var _collect *Collect
+
+func initCollect(readInterval int, keepalive int) {
+	_collect = newCollect(readInterval, keepalive)
 }
 
-var _ Collect = &collect{}
+func GetCollect() *Collect {
+	return _collect
+}
 
-type collect struct {
-	crate        Crate
+type Collect struct {
 	keepalive    time.Duration
 	readInterval time.Duration
 	drivers      map[string]*driverWrap
@@ -31,9 +27,8 @@ type collect struct {
 	close        chan struct{}
 }
 
-func newCollect(crate Crate, readInterval int, keepalive int) Collect {
-	coll := &collect{
-		crate:        crate,
+func newCollect(readInterval int, keepalive int) *Collect {
+	coll := &Collect{
 		keepalive:    time.Second * time.Duration(keepalive),
 		readInterval: time.Second * time.Duration(readInterval),
 		drivers:      make(map[string]*driverWrap),
@@ -43,7 +38,7 @@ func newCollect(crate Crate, readInterval int, keepalive int) Collect {
 	return coll
 }
 
-func (c *collect) free() {
+func (c *Collect) free() {
 	ticker := time.NewTicker(60 * time.Second)
 	for {
 		select {
@@ -66,7 +61,7 @@ func (c *collect) free() {
 	}
 }
 
-func (c *collect) read() {
+func (c *Collect) read() {
 	ticker := time.NewTicker(c.readInterval)
 	for {
 		select {
@@ -75,7 +70,7 @@ func (c *collect) read() {
 			return
 		case <-ticker.C:
 			if err := c.connect(); err != nil {
-				suger.Errorf("c.connect(): %s", err)
+				log.Suger.Errorf("c.connect(): %s", err)
 				continue
 			}
 
@@ -90,7 +85,7 @@ func (c *collect) read() {
 					//fmt.Println(driver.tags)
 
 					for i := 0; i < len(driver.tags); i++ {
-						c.crate.DBus().SetValue(driver.tags[i].Name, driver.tags[i].Value, false)
+						GetCache().SetValue(driver.tags[i].Name, driver.tags[i].Value, false)
 					}
 				}(slotId, driver)
 			}
@@ -100,8 +95,8 @@ func (c *collect) read() {
 	}
 }
 
-func (c *collect) connect() error {
-	slots, err := c.crate.SlotService().ListSlotByStatusOn()
+func (c *Collect) connect() error {
+	slots, err := GetService().ListSlotByStatusOn()
 	if err != nil {
 		return err
 	}
@@ -115,17 +110,13 @@ func (c *collect) connect() error {
 			continue
 		}
 
-		// if slot.Driver != DriverS7_TCP && slot.Driver != DriverMODBUS_TCP {
-		// 	continue
-		// }
-
-		if d, ok := registerDriver[slot.Driver]; ok {
-			driver, err := d.Connect(c.crate, slot.Params)
+		if d, ok := _drivers[slot.Driver]; ok {
+			driver, err := d.Connect(slot.Params)
 			if err != nil {
 				return err
 			}
 
-			tags, err := c.crate.SlotService().ListTagByStatusOnAndIO(slot.Id)
+			tags, err := GetService().ListTagByStatusOnAndIO(slot.Id)
 			if err != nil {
 				return err
 			}
@@ -143,13 +134,13 @@ func (c *collect) connect() error {
 	return nil
 }
 
-func (c *collect) Run() {
-	zaplog.Info("starting collect")
+func (c *Collect) Run() {
+	log.Logger.Info("starting collect")
 	go c.free()
 	go c.read()
 }
 
-func (c *collect) Stop() error {
+func (c *Collect) Stop() error {
 	select {
 	case <-c.close:
 		return nil
@@ -171,7 +162,7 @@ func (c *collect) Stop() error {
 }
 
 // 更新 slot/tag 后，需要调用此函数
-func (c *collect) Reset(slotId string) {
+func (c *Collect) Reset(slotId string) {
 	c.lock.Lock()
 	if v, ok := c.drivers[slotId]; ok {
 		v.lock.Lock()
@@ -183,7 +174,7 @@ func (c *collect) Reset(slotId string) {
 }
 
 // 注意，要写入的标签必须为同一个 slot
-func (c *collect) Write(tags []Tag) error {
+func (c *Collect) Write(tags []Tag) error {
 	if len(tags) == 0 {
 		return nil
 	}
@@ -195,7 +186,7 @@ func (c *collect) Write(tags []Tag) error {
 			return errors.New("要写入的标签必须为同一个 slot")
 		}
 
-		if tag.AccessMode != RW {
+		if tag.AccessMode != consts.RW {
 			return errors.New("tag.AccessMode != RW")
 		}
 
@@ -204,26 +195,14 @@ func (c *collect) Write(tags []Tag) error {
 		}
 	}
 
-	slot, err := c.crate.SlotService().GetSlot(slotId)
+	slot, err := GetService().GetSlot(slotId)
 	if err != nil {
 		return err
 	}
 
-	if slot.Status != ON {
+	if slot.Status != consts.ON {
 		return nil
 	}
-
-	if slot.Driver == DriverMQTT {
-		return c.writeToMqtt(tags)
-	}
-
-	// if slot.Driver != DriverS7_TCP && slot.Driver != DriverMODBUS_TCP {
-	// 	if slot.Driver == DriverMQTT {
-	// 		return c.writeToMqtt(tags)
-	// 	}
-
-	// 	return nil
-	// }
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -238,13 +217,13 @@ func (c *collect) Write(tags []Tag) error {
 		return nil
 	}
 
-	if d, ok := registerDriver[slot.Driver]; ok {
-		driver, err := d.Connect(c.crate, slot.Params)
+	if d, ok := _drivers[slot.Driver]; ok {
+		driver, err := d.Connect(slot.Params)
 		if err != nil {
 			return err
 		}
 
-		tags, err := c.crate.SlotService().ListTagByStatusOnAndIO(slot.Id)
+		tags, err := GetService().ListTagByStatusOnAndIO(slot.Id)
 		if err != nil {
 			return err
 		}
@@ -268,64 +247,27 @@ func (c *collect) Write(tags []Tag) error {
 	return nil
 }
 
-func (c *collect) writeToMqtt(tags []Tag) error {
-	slotId := tags[0].SlotId
+type driverWrap struct {
+	driver  Driver
+	lastUse time.Time
+	tags    []Tag
+	lock    sync.Mutex
+}
 
-	mqttServer := c.crate.MqttService().MqttServer()
+func (d *driverWrap) read(tags []Tag) error {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-	client, has := mqttServer.Client(slotId)
+	d.lastUse = time.Now()
 
-	flags := uint16(0)
-	if has {
-		f, has := client.Get("FLAGS")
-		if has {
-			flags = uint16(f.(nson.U32))
-		}
-	}
+	return d.driver.Read(tags)
+}
 
-	if flags == 0 {
-		data := make(map[string]interface{})
+func (d *driverWrap) write(tags []Tag) error {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-		for i := 0; i < len(tags); i++ {
-			data[tags[i].Address] = tags[i].Value
-		}
+	d.lastUse = time.Now()
 
-		msg := map[string]interface{}{
-			dict.DATA: data,
-		}
-
-		bts, err := json.Marshal(msg)
-		if err != nil {
-			return err
-		}
-
-		buffer := new(bytes.Buffer)
-		util.WriteUint16(flags, buffer)
-
-		buffer.Write(bts)
-
-		mqttServer.PublishService().PublishToClient(slotId, mqtt.NewMessage(dict.DEV_DATA_SET, buffer.Bytes(), 0), false)
-	} else if flags == 1 {
-		buffer := new(bytes.Buffer)
-
-		util.WriteUint16(flags, buffer)
-
-		data := nson.Message{}
-		for i := 0; i < len(tags); i++ {
-			data[tags[i].Address] = tags[i].Value
-		}
-
-		msg := nson.Message{
-			"data": data,
-		}
-
-		err := msg.Encode(buffer)
-		if err != nil {
-			return err
-		}
-
-		mqttServer.PublishService().PublishToClient(slotId, mqtt.NewMessage(dict.DEV_DATA_SET, buffer.Bytes(), 0), false)
-	}
-
-	return nil
+	return d.driver.Write(tags)
 }

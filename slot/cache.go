@@ -1,4 +1,4 @@
-package july
+package slot
 
 import (
 	"bytes"
@@ -6,46 +6,44 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/danclive/july/bolt"
+	"github.com/danclive/july/log"
 	"github.com/danclive/nson-go"
 	"go.etcd.io/bbolt"
 )
 
-var DBUS_BUCKET = []byte("dbus")
+var _cache *Cache
 
-type DBus interface {
-	Get(tagName string) (Tag, bool)
-	Delete(tagName string)
-	SetValue(tagName string, value nson.Value, ioWrite bool) error
-	GetValue(tagName string) (nson.Value, bool)
-	UpdateTagConfig(tagName string)
+func initCache() {
+	_cache = newCache()
 }
 
-var _ DBus = &dBus{}
+func GetCache() *Cache {
+	return _cache
+}
 
-type dBus struct {
-	crate Crate
+type Cache struct {
 	cache map[string]Tag
 	lock  sync.Mutex
 }
 
-func newDBus(crate Crate) DBus {
-	bus := &dBus{
-		crate: crate,
+func newCache() *Cache {
+	bus := &Cache{
 		cache: make(map[string]Tag),
 	}
 
 	return bus
 }
 
-// func (d *dBus) Clear() {
-// 	d.lock.RLock()
-// 	defer d.lock.RUnlock()
+func (d *Cache) Clear() {
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
-// 	d.cache = nil
-// 	d.cache = make(map[string]Tag)
-// }
+	d.cache = nil
+	d.cache = make(map[string]Tag)
+}
 
-func (d *dBus) getTag(tagName string) (Tag, bool) {
+func (d *Cache) getTag(tagName string) (Tag, bool) {
 	tag, ok := d.cache[tagName]
 	if ok {
 		return tag, true
@@ -60,7 +58,7 @@ func (d *dBus) getTag(tagName string) (Tag, bool) {
 	return Tag{}, false
 }
 
-func (d *dBus) Get(tagName string) (Tag, bool) {
+func (d *Cache) Get(tagName string) (Tag, bool) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -72,8 +70,8 @@ func (d *dBus) Get(tagName string) (Tag, bool) {
 	if tag.TagType == TagTypeCFG {
 		var value nson.Value
 
-		err := d.crate.BboltDB().View(func(tx *bbolt.Tx) error {
-			bucket := tx.Bucket(DBUS_BUCKET)
+		err := bolt.GetBoltDB().View(func(tx *bbolt.Tx) error {
+			bucket := tx.Bucket(bolt.CFG_BUCKET)
 			v := bucket.Get([]byte(tagName))
 			if v == nil {
 				return errors.New("not exist")
@@ -97,14 +95,14 @@ func (d *dBus) Get(tagName string) (Tag, bool) {
 		})
 
 		if err != nil {
-			suger.Debugf("crate.BboltDB().View: %s", err)
+			log.Suger.Debugf("bolt.BoltDB.View: %s", err)
 		}
 
 		if err == nil && value != nil {
 			if tag.Value.Tag() == value.Tag() {
 				tag.Value = value
 			} else {
-				suger.Errorf("tag.Value.Tag(%v) != value.Tag(%v)", tag.Value.Tag(), value.Tag())
+				log.Suger.Errorf("tag.Value.Tag(%v) != value.Tag(%v)", tag.Value.Tag(), value.Tag())
 			}
 		}
 	}
@@ -112,14 +110,14 @@ func (d *dBus) Get(tagName string) (Tag, bool) {
 	return tag, has
 }
 
-func (d *dBus) Delete(tagName string) {
+func (d *Cache) Delete(tagName string) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
 	delete(d.cache, tagName)
 }
 
-func (d *dBus) GetValue(tagName string) (nson.Value, bool) {
+func (d *Cache) GetValue(tagName string) (nson.Value, bool) {
 	tag, has := d.Get(tagName)
 	if has {
 		return tag.Value, true
@@ -128,7 +126,7 @@ func (d *dBus) GetValue(tagName string) (nson.Value, bool) {
 	return nil, false
 }
 
-func (d *dBus) SetValue(tagName string, value nson.Value, ioWrite bool) error {
+func (d *Cache) SetValue(tagName string, value nson.Value, ioWrite bool) error {
 	if value == nil {
 		return nil
 	}
@@ -190,8 +188,8 @@ func (d *dBus) SetValue(tagName string, value nson.Value, ioWrite bool) error {
 			go d.IoWrite(tag)
 		}
 	} else if tag.TagType == TagTypeCFG {
-		err := d.crate.BboltDB().Update(func(tx *bbolt.Tx) error {
-			b := tx.Bucket(DBUS_BUCKET)
+		err := bolt.GetBoltDB().Update(func(tx *bbolt.Tx) error {
+			b := tx.Bucket(bolt.CFG_BUCKET)
 
 			buffer := new(bytes.Buffer)
 
@@ -209,7 +207,7 @@ func (d *dBus) SetValue(tagName string, value nson.Value, ioWrite bool) error {
 		})
 
 		if err != nil {
-			suger.Error("db.BboltDB.Update:", err)
+			log.Suger.Error("bolt.BoltDB.Update:", err)
 			return err
 		}
 	}
@@ -218,7 +216,7 @@ func (d *dBus) SetValue(tagName string, value nson.Value, ioWrite bool) error {
 }
 
 // 此方法用来在修改标签配置后更新配置，到保留之前的值
-func (d *dBus) UpdateTagConfig(tagName string) {
+func (d *Cache) UpdateTagConfig(tagName string) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -239,10 +237,10 @@ func (d *dBus) UpdateTagConfig(tagName string) {
 }
 
 // 从数据库查询标签
-func (d *dBus) getTagByName(tagName string) *Tag {
-	tag, err := d.crate.SlotService().GetTagByName(tagName)
+func (d *Cache) getTagByName(tagName string) *Tag {
+	tag, err := GetService().GetTagByName(tagName)
 	if err != nil {
-		suger.Errorf("crate.SlotService().GetTagByName: %s", err)
+		log.Suger.Errorf("Service.GetTagByName: %s", err)
 		return nil
 	}
 
@@ -259,13 +257,12 @@ func (d *dBus) getTagByName(tagName string) *Tag {
 	return tag
 }
 
-func (d *dBus) IoWrite(tag Tag) {
-	if coll := d.crate.Collect(); coll != nil {
-		err := coll.Write([]Tag{tag})
-		if err != nil {
-			suger.Warnf("coll.Write([]Tag{tag}): %s", err)
-		}
+func (d *Cache) IoWrite(tag Tag) {
+	err := GetCollect().Write([]Tag{tag})
+	if err != nil {
+		log.Suger.Warnf("Collect.Write([]Tag{tag}): %s", err)
 	}
+
 }
 
 func decode_value(buf *bytes.Buffer, tag uint8) (nson.Value, error) {

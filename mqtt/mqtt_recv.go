@@ -1,10 +1,13 @@
-package july
+package mqtt
 
 import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/danclive/july/consts"
 	"github.com/danclive/july/dict"
+	"github.com/danclive/july/log"
+	"github.com/danclive/july/slot"
 	"github.com/danclive/july/util"
 	"github.com/danclive/mqtt"
 	"github.com/danclive/mqtt/packets"
@@ -12,7 +15,6 @@ import (
 )
 
 type MqttRecv struct {
-	crate  Crate
 	server mqtt.Server
 }
 
@@ -40,7 +42,7 @@ func (m *MqttRecv) Hooks() mqtt.Hooks {
 func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bool) {
 	clientId := client.OptionsReader().ClientID()
 
-	// suger.Debug(
+	// log.Suger.Debug(
 	// 	"msgArrived",
 	// 	zap.String("clientId", clientId),
 	// 	zap.String("topic", msg.Topic()),
@@ -51,7 +53,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 
 		flags, err := util.ReadUint16(reader)
 		if err != nil {
-			suger.Errorf("read flags: %s", err)
+			log.Suger.Errorf("read flags: %s", err)
 		}
 
 		client.Set("FLAGS", nson.U32(flags))
@@ -61,7 +63,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 
 			err = json.Unmarshal(reader.Bytes(), &message)
 			if err != nil {
-				suger.Errorf("json.Unmarshal(reader.Bytes(): %s", err)
+				log.Suger.Errorf("json.Unmarshal(reader.Bytes(): %s", err)
 				return
 			}
 
@@ -70,21 +72,20 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 					// fmt.Println(dataMessage)
 
 					// 查询设备
-					s, err := m.crate.SlotService().GetSlot(clientId)
+					s, err := slot.GetService().GetSlot(clientId)
 					if err != nil {
-						suger.Errorf("SlotService{}.GetSlot(clientId): %s", err)
+						log.Suger.Errorf("GetSlot(clientId): %s", err)
 						return
 					}
 
-					if s.Status != ON {
+					if s.Status != consts.ON {
 						return
 					}
 
 					for k, v := range dataMessage {
-						// tag, err := m.crate.SlotService().GetTagByName(k)
-						tag, err := m.crate.SlotService().GetTagBySlotIdAndAddress(clientId, k)
+						tag, err := slot.GetService().GetTagBySlotIdAndAddress(clientId, k)
 						if err != nil {
-							suger.Errorf("SlotService{}.GetTagByName(k): %s", err)
+							log.Suger.Errorf("GetTagByName(k): %s", err)
 							return
 						}
 
@@ -92,42 +93,42 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 							continue
 						}
 
-						if tag.Status != ON || tag.TagType != TagTypeIO {
+						if tag.Status != consts.ON || tag.TagType != slot.TagTypeIO {
 							continue
 						}
 
 						var value2 nson.Value
 
 						switch tag.DataType {
-						case TypeI8, TypeI16, TypeI32:
+						case slot.TypeI8, slot.TypeI16, slot.TypeI32:
 							if value, ok := v.(float64); ok {
 								value2 = nson.I32(value)
 							}
-						case TypeU8, TypeU16, TypeU32:
+						case slot.TypeU8, slot.TypeU16, slot.TypeU32:
 							if value, ok := v.(float64); ok {
 								value2 = nson.U32(value)
 							}
-						case TypeI64:
+						case slot.TypeI64:
 							if value, ok := v.(float64); ok {
 								value2 = nson.I64(value)
 							}
-						case TypeU64:
+						case slot.TypeU64:
 							if value, ok := v.(float64); ok {
 								value2 = nson.U64(value)
 							}
-						case TypeF32:
+						case slot.TypeF32:
 							if value, ok := v.(float64); ok {
 								value2 = nson.F32(value)
 							}
-						case TypeF64:
+						case slot.TypeF64:
 							if value, ok := v.(float64); ok {
 								value2 = nson.F64(value)
 							}
-						case TypeBool:
+						case slot.TypeBool:
 							if value, ok := v.(bool); ok {
 								value2 = nson.Bool(value)
 							}
-						case TypeString:
+						case slot.TypeString:
 							if value, ok := v.(string); ok {
 								value2 = nson.String(value)
 							}
@@ -137,7 +138,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 
 						if value2 != nil {
 							// 缓存
-							m.crate.DBus().SetValue(tag.Name, value2, false)
+							slot.GetCache().SetValue(tag.Name, value2, false)
 						}
 					}
 
@@ -148,7 +149,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 		} else if flags == 1 {
 			nsonValue, err := nson.Message{}.Decode(reader)
 			if err != nil {
-				suger.Errorf("nson.Message{}.Decode: %s", err)
+				log.Suger.Errorf("nson.Message{}.Decode: %s", err)
 				return
 			}
 
@@ -159,17 +160,17 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 
 			data, err := message.GetMessage(dict.DATA)
 			if err != nil {
-				suger.Errorf("message.GetMessage(dict.DATA): %s", err)
+				log.Suger.Errorf("message.GetMessage(dict.DATA): %s", err)
 				return
 			}
 
-			s, err := m.crate.SlotService().GetSlot(clientId)
+			s, err := slot.GetService().GetSlot(clientId)
 			if err != nil {
-				suger.Errorf("SlotService{}.GetSlot(clientId): %s", err)
+				log.Suger.Errorf("SlotService{}.GetSlot(clientId): %s", err)
 				return
 			}
 
-			if s.Status != ON {
+			if s.Status != consts.ON {
 				return
 			}
 
@@ -177,9 +178,9 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 			// fmt.Println(clientId)
 
 			for k, v := range data {
-				tag, err := m.crate.SlotService().GetTagBySlotIdAndAddress(clientId, k)
+				tag, err := slot.GetService().GetTagBySlotIdAndAddress(clientId, k)
 				if err != nil {
-					suger.Errorf("SlotService{}.GetTagByName(k): %s", err)
+					log.Suger.Errorf("SlotService{}.GetTagByName(k): %s", err)
 					return
 				}
 
@@ -189,40 +190,40 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 					continue
 				}
 
-				if tag.Status != ON {
+				if tag.Status != consts.ON {
 					continue
 				}
 
 				switch tag.DataType {
-				case TypeI8, TypeI16, TypeI32:
+				case slot.TypeI8, slot.TypeI16, slot.TypeI32:
 					if v.Tag() != nson.TAG_I32 {
 						continue
 					}
-				case TypeU8, TypeU16, TypeU32:
+				case slot.TypeU8, slot.TypeU16, slot.TypeU32:
 					if v.Tag() != nson.TAG_U32 {
 						continue
 					}
-				case TypeI64:
+				case slot.TypeI64:
 					if v.Tag() != nson.TAG_I64 {
 						continue
 					}
-				case TypeU64:
+				case slot.TypeU64:
 					if v.Tag() != nson.TAG_U64 {
 						continue
 					}
-				case TypeF32:
+				case slot.TypeF32:
 					if v.Tag() != nson.TAG_F32 {
 						continue
 					}
-				case TypeF64:
+				case slot.TypeF64:
 					if v.Tag() != nson.TAG_F64 {
 						continue
 					}
-				case TypeBool:
+				case slot.TypeBool:
 					if v.Tag() != nson.TAG_BOOL {
 						continue
 					}
-				case TypeString:
+				case slot.TypeString:
 					if v.Tag() != nson.TAG_STRING {
 						continue
 					}
@@ -231,7 +232,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 				}
 
 				// 缓存
-				m.crate.DBus().SetValue(tag.Name, v, false)
+				slot.GetCache().SetValue(tag.Name, v, false)
 			}
 		}
 

@@ -1,4 +1,4 @@
-package july
+package slot
 
 import (
 	"testing"
