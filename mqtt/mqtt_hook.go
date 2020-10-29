@@ -4,26 +4,26 @@ import (
 	"net/url"
 
 	"github.com/danclive/july/consts"
-	"github.com/danclive/july/slot"
+	"github.com/danclive/july/device"
 	"github.com/danclive/july/util"
 	"github.com/danclive/mqtt"
 	"github.com/danclive/mqtt/packets"
 )
 
 func hook() mqtt.Hooks {
-	slot.GetService().SlotReset(slot.DriverMQTT)
+	device.GetService().SlotReset(device.DriverMQTT)
 
 	onConnect := func(client mqtt.Client) (code uint8) {
 		clientId := client.OptionsReader().ClientID()
 		username := client.OptionsReader().Username()
 		password := client.OptionsReader().Password()
 
-		s, err := slot.GetService().GetSlot(clientId)
+		s, err := device.GetService().GetSlot(clientId)
 		if err != nil {
 			return packets.CodeServerUnavaliable
 		}
 
-		if s.Driver != slot.DriverMQTT {
+		if s.Driver != device.DriverMQTT {
 			return packets.CodeNotAuthorized
 		}
 
@@ -56,17 +56,17 @@ func hook() mqtt.Hooks {
 	onConnected := func(client mqtt.Client) {
 		clientId := client.OptionsReader().ClientID()
 
-		slot.GetService().SlotOnline(clientId)
+		device.GetService().SlotOnline(clientId)
 	}
 
 	onClose := func(client mqtt.Client, err error) {
 		clientId := client.OptionsReader().ClientID()
 
-		slot.GetService().SlotOffline(clientId)
+		device.GetService().SlotOffline(clientId)
 	}
 
 	onStop := func() {
-		slot.GetService().SlotReset(slot.DriverMQTT)
+		device.GetService().SlotReset(device.DriverMQTT)
 	}
 
 	hooks := mqtt.Hooks{

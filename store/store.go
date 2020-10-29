@@ -7,8 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/danclive/july/cache"
+	"github.com/danclive/july/device"
 	"github.com/danclive/july/log"
-	"github.com/danclive/july/slot"
 	"github.com/danclive/july/util"
 	"xorm.io/xorm"
 )
@@ -65,7 +66,7 @@ func (s *Service) run() {
 			return
 		case ti := <-ticker.C:
 			func(ti time.Time) {
-				tags, err := slot.GetService().ListTagForHisData()
+				tags, err := device.GetService().ListTagForHisData()
 				if err != nil {
 					log.Suger.Errorf("SlotService().ListTagForHisData(): %s", err)
 					return
@@ -74,16 +75,13 @@ func (s *Service) run() {
 				log.Suger.Debugf("Save tags: %v", len(tags))
 
 				for i := 0; i < len(tags); i++ {
-					value, has := slot.GetCache().GetValue(tags[i].Name)
-					if !has {
+					tag, err := cache.GetService().GetTagById(tags[i].Id)
+					if err != nil {
+						log.Suger.Error(err)
 						continue
 					}
 
-					if value == nil {
-						continue
-					}
-
-					value2, ok := util.NsonValueToFloat64(value)
+					value2, ok := util.NsonValueToFloat64(tag.Value)
 					if !ok {
 						continue
 					}
