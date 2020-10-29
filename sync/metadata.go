@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/danclive/july/device"
 	"github.com/danclive/july/dict"
 	"github.com/danclive/july/log"
+	slotpkg "github.com/danclive/july/slot"
 	"github.com/danclive/nson-go"
 	"github.com/danclive/queen-go/client"
 )
@@ -75,7 +75,7 @@ func syncMetadata(recv nson.Message) nson.Message {
 }
 
 func pullSlots(params, recv nson.Message) nson.Message {
-	slots, err := device.GetService().ListSlotSimple()
+	slots, err := slotpkg.GetService().ListSlotSimple()
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -106,7 +106,7 @@ func pullSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot, err := device.GetService().GetSlot(slotId)
+	slot, err := slotpkg.GetService().GetSlot(slotId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -144,7 +144,7 @@ func pullTags(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tags, err := device.GetService().ListTagSimple(slotId)
+	tags, err := slotpkg.GetService().ListTagSimple(slotId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -175,7 +175,7 @@ func pullTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag, err := device.GetService().GetTag(tagId)
+	tag, err := slotpkg.GetService().GetTag(tagId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -213,7 +213,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slots := make([]device.Slot, 0)
+	slots := make([]slotpkg.Slot, 0)
 
 	err = json.Unmarshal(data, &slots)
 	if err != nil {
@@ -224,7 +224,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 	}
 
 	for i := 0; i < len(slots); i++ {
-		slot, err := device.GetService().GetSlot(slots[i].Id)
+		slot, err := slotpkg.GetService().GetSlot(slots[i].Id)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -240,7 +240,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 			slot.Status = slots[i].Status
 			slot.Order = slots[i].Order
 
-			_, err := device.GetService().UpdateSlot(slot)
+			_, err := slotpkg.GetService().UpdateSlot(slot)
 			if err != nil {
 				return nson.Message{
 					dict.CODE:  nson.I32(500),
@@ -252,7 +252,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 		}
 
 	NEW:
-		slot2 := device.Slot{
+		slot2 := slotpkg.Slot{
 			Id:     slots[i].Id,
 			Name:   slots[i].Name,
 			Desc:   slots[i].Desc,
@@ -262,10 +262,10 @@ func pushSlots(params, recv nson.Message) nson.Message {
 			Order:  slots[i].Order,
 		}
 
-		_, err = device.GetService().CreateSlot(&slot2)
+		_, err = slotpkg.GetService().CreateSlot(&slot2)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(slot2.Id, &slot2)
+				err = slotpkg.GetService().DeleteForce(slot2.Id, &slot2)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -297,7 +297,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot := device.Slot{}
+	slot := slotpkg.Slot{}
 
 	err = json.Unmarshal(data, &slot)
 	if err != nil {
@@ -307,7 +307,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot2, err := device.GetService().GetSlot(slot.Id)
+	slot2, err := slotpkg.GetService().GetSlot(slot.Id)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -323,7 +323,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 		slot2.Status = slot.Status
 		slot2.Order = slot.Order
 
-		_, err := device.GetService().UpdateSlot(slot2)
+		_, err := slotpkg.GetService().UpdateSlot(slot2)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -333,7 +333,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 	} else {
 
 	NEW:
-		slot3 := device.Slot{
+		slot3 := slotpkg.Slot{
 			Id:     slot.Id,
 			Name:   slot.Name,
 			Desc:   slot.Desc,
@@ -343,10 +343,10 @@ func pushSlot(params, recv nson.Message) nson.Message {
 			Order:  slot.Order,
 		}
 
-		_, err = device.GetService().CreateSlot(&slot3)
+		_, err = slotpkg.GetService().CreateSlot(&slot3)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(slot3.Id, &slot3)
+				err = slotpkg.GetService().DeleteForce(slot3.Id, &slot3)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -378,7 +378,7 @@ func deleteSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot, err := device.GetService().GetSlot(slotId)
+	slot, err := slotpkg.GetService().GetSlot(slotId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -393,7 +393,7 @@ func deleteSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	err = device.GetService().DeleteSlot(slot)
+	err = slotpkg.GetService().DeleteSlot(slot)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -415,7 +415,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tags := make([]device.Tag, 0)
+	tags := make([]slotpkg.Tag, 0)
 
 	err = json.Unmarshal(data, &tags)
 	if err != nil {
@@ -426,7 +426,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 	}
 
 	for i := 0; i < len(tags); i++ {
-		tag, err := device.GetService().GetTag(tags[i].Id)
+		tag, err := slotpkg.GetService().GetTag(tags[i].Id)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -438,7 +438,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 			tag.Name = tags[i].Name
 			tag.Desc = tags[i].Desc
 			tag.Unit = tags[i].Unit
-			tag.Type = tags[i].Type
+			tag.TagType = tags[i].TagType
 			tag.DataType = tags[i].DataType
 			tag.Format = tags[i].Format
 			tag.Address = tags[i].Address
@@ -449,7 +449,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 			tag.Status = tags[i].Status
 			tag.Order = tags[i].Order
 
-			_, err := device.GetService().UpdateTag(tag)
+			_, err := slotpkg.GetService().UpdateTag(tag)
 			if err != nil {
 				return nson.Message{
 					dict.CODE:  nson.I32(500),
@@ -461,13 +461,13 @@ func pushTags(params, recv nson.Message) nson.Message {
 		}
 
 	NEW:
-		tag2 := device.Tag{
+		tag2 := slotpkg.Tag{
 			Id:         tags[i].Id,
 			SlotId:     tags[i].SlotId,
 			Name:       tags[i].Name,
 			Desc:       tags[i].Desc,
 			Unit:       tags[i].Unit,
-			Type:       tags[i].Type,
+			TagType:    tags[i].TagType,
 			DataType:   tags[i].DataType,
 			Format:     tags[i].Format,
 			Address:    tags[i].Address,
@@ -479,10 +479,10 @@ func pushTags(params, recv nson.Message) nson.Message {
 			Order:      tags[i].Order,
 		}
 
-		_, err = device.GetService().CreateTag(&tag2)
+		_, err = slotpkg.GetService().CreateTag(&tag2)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(tag2.Id, &tag2)
+				err = slotpkg.GetService().DeleteForce(tag2.Id, &tag2)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -514,7 +514,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag := device.Tag{}
+	tag := slotpkg.Tag{}
 	err = json.Unmarshal(data, &tag)
 	if err != nil {
 		return nson.Message{
@@ -523,7 +523,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag2, err := device.GetService().GetTag(tag.Id)
+	tag2, err := slotpkg.GetService().GetTag(tag.Id)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -535,7 +535,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 		tag2.Name = tag.Name
 		tag2.Desc = tag.Desc
 		tag2.Unit = tag.Unit
-		tag2.Type = tag.Type
+		tag2.TagType = tag.TagType
 		tag2.DataType = tag.DataType
 		tag2.Format = tag.Format
 		tag2.Address = tag.Address
@@ -546,7 +546,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 		tag2.Status = tag.Status
 		tag2.Order = tag.Order
 
-		_, err := device.GetService().UpdateTag(tag2)
+		_, err := slotpkg.GetService().UpdateTag(tag2)
 		if err != nil {
 			return nson.Message{
 				dict.CODE:  nson.I32(500),
@@ -556,13 +556,13 @@ func pushTag(params, recv nson.Message) nson.Message {
 	} else {
 
 	NEW:
-		tag3 := device.Tag{
+		tag3 := slotpkg.Tag{
 			Id:         tag.Id,
 			SlotId:     tag.SlotId,
 			Name:       tag.Name,
 			Desc:       tag.Desc,
 			Unit:       tag.Unit,
-			Type:       tag.Type,
+			TagType:    tag.TagType,
 			DataType:   tag.DataType,
 			Format:     tag.Format,
 			Address:    tag.Address,
@@ -574,10 +574,10 @@ func pushTag(params, recv nson.Message) nson.Message {
 			Order:      tag.Order,
 		}
 
-		_, err = device.GetService().CreateTag(&tag3)
+		_, err = slotpkg.GetService().CreateTag(&tag3)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(tag3.Id, &tag3)
+				err = slotpkg.GetService().DeleteForce(tag3.Id, &tag3)
 				if err != nil {
 					return nson.Message{
 						dict.CODE:  nson.I32(500),
@@ -609,7 +609,7 @@ func deleteTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag, err := device.GetService().GetTag(tagId)
+	tag, err := slotpkg.GetService().GetTag(tagId)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),
@@ -624,7 +624,7 @@ func deleteTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	err = device.GetService().DeleteTag(tag)
+	err = slotpkg.GetService().DeleteTag(tag)
 	if err != nil {
 		return nson.Message{
 			dict.CODE:  nson.I32(500),

@@ -4,12 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/danclive/july/collect"
-
 	"github.com/danclive/july/consts"
-	"github.com/danclive/july/device"
 	"github.com/danclive/july/dict"
 	"github.com/danclive/july/log"
+	"github.com/danclive/july/slot"
 	"github.com/danclive/july/util"
 	"github.com/danclive/mqtt"
 	"github.com/danclive/mqtt/packets"
@@ -58,7 +56,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 			log.Suger.Errorf("read flags: %s", err)
 		}
 
-		client.Set(dict.FLAGS, nson.U32(flags))
+		client.Set("FLAGS", nson.U32(flags))
 
 		if flags == 0 {
 			message := map[string]interface{}{}
@@ -71,15 +69,12 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 
 			if data, ok := message[dict.DATA]; ok {
 				if dataMessage, ok := data.(map[string]interface{}); ok {
+					// fmt.Println(dataMessage)
 
 					// 查询设备
-					s, err := device.GetService().GetSlot(clientId)
+					s, err := slot.GetService().GetSlot(clientId)
 					if err != nil {
 						log.Suger.Errorf("GetSlot(clientId): %s", err)
-						return
-					}
-
-					if s == nil {
 						return
 					}
 
@@ -88,7 +83,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 					}
 
 					for k, v := range dataMessage {
-						tag, err := device.GetService().GetTagBySlotIdAndAddress(clientId, k)
+						tag, err := slot.GetService().GetTagBySlotIdAndAddress(clientId, k)
 						if err != nil {
 							log.Suger.Errorf("GetTagByName(k): %s", err)
 							return
@@ -98,42 +93,42 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 							continue
 						}
 
-						if tag.Status != consts.ON || tag.Type != device.TypeIO {
+						if tag.Status != consts.ON || tag.TagType != slot.TagTypeIO {
 							continue
 						}
 
 						var value2 nson.Value
 
 						switch tag.DataType {
-						case device.TypeI8, device.TypeI16, device.TypeI32:
+						case slot.TypeI8, slot.TypeI16, slot.TypeI32:
 							if value, ok := v.(float64); ok {
 								value2 = nson.I32(value)
 							}
-						case device.TypeU8, device.TypeU16, device.TypeU32:
+						case slot.TypeU8, slot.TypeU16, slot.TypeU32:
 							if value, ok := v.(float64); ok {
 								value2 = nson.U32(value)
 							}
-						case device.TypeI64:
+						case slot.TypeI64:
 							if value, ok := v.(float64); ok {
 								value2 = nson.I64(value)
 							}
-						case device.TypeU64:
+						case slot.TypeU64:
 							if value, ok := v.(float64); ok {
 								value2 = nson.U64(value)
 							}
-						case device.TypeF32:
+						case slot.TypeF32:
 							if value, ok := v.(float64); ok {
 								value2 = nson.F32(value)
 							}
-						case device.TypeF64:
+						case slot.TypeF64:
 							if value, ok := v.(float64); ok {
 								value2 = nson.F64(value)
 							}
-						case device.TypeBool:
+						case slot.TypeBool:
 							if value, ok := v.(bool); ok {
 								value2 = nson.Bool(value)
 							}
-						case device.TypeString:
+						case slot.TypeString:
 							if value, ok := v.(string); ok {
 								value2 = nson.String(value)
 							}
@@ -143,7 +138,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 
 						if value2 != nil {
 							// 缓存
-							collect.CacheSet(tag.Id, value2)
+							slot.GetCache().SetValue(tag.Name, value2, false)
 						}
 					}
 
@@ -169,13 +164,9 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 				return
 			}
 
-			s, err := device.GetService().GetSlot(clientId)
+			s, err := slot.GetService().GetSlot(clientId)
 			if err != nil {
 				log.Suger.Errorf("SlotService{}.GetSlot(clientId): %s", err)
-				return
-			}
-
-			if s == nil {
 				return
 			}
 
@@ -187,7 +178,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 			// fmt.Println(clientId)
 
 			for k, v := range data {
-				tag, err := device.GetService().GetTagBySlotIdAndAddress(clientId, k)
+				tag, err := slot.GetService().GetTagBySlotIdAndAddress(clientId, k)
 				if err != nil {
 					log.Suger.Errorf("SlotService{}.GetTagByName(k): %s", err)
 					return
@@ -204,35 +195,35 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 				}
 
 				switch tag.DataType {
-				case device.TypeI8, device.TypeI16, device.TypeI32:
+				case slot.TypeI8, slot.TypeI16, slot.TypeI32:
 					if v.Tag() != nson.TAG_I32 {
 						continue
 					}
-				case device.TypeU8, device.TypeU16, device.TypeU32:
+				case slot.TypeU8, slot.TypeU16, slot.TypeU32:
 					if v.Tag() != nson.TAG_U32 {
 						continue
 					}
-				case device.TypeI64:
+				case slot.TypeI64:
 					if v.Tag() != nson.TAG_I64 {
 						continue
 					}
-				case device.TypeU64:
+				case slot.TypeU64:
 					if v.Tag() != nson.TAG_U64 {
 						continue
 					}
-				case device.TypeF32:
+				case slot.TypeF32:
 					if v.Tag() != nson.TAG_F32 {
 						continue
 					}
-				case device.TypeF64:
+				case slot.TypeF64:
 					if v.Tag() != nson.TAG_F64 {
 						continue
 					}
-				case device.TypeBool:
+				case slot.TypeBool:
 					if v.Tag() != nson.TAG_BOOL {
 						continue
 					}
-				case device.TypeString:
+				case slot.TypeString:
 					if v.Tag() != nson.TAG_STRING {
 						continue
 					}
@@ -241,7 +232,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 				}
 
 				// 缓存
-				collect.CacheSet(tag.Id, v)
+				slot.GetCache().SetValue(tag.Name, v, false)
 			}
 		}
 

@@ -1,18 +1,16 @@
 package dict
 
-// parmas
+// 请求相关
 const (
 	METHOD    = "method"
 	PARAMS    = "params"
 	CODE      = "code"
 	ERROR     = "error"
 	DATA      = "data"
-	DATA_SIZE = "datase"
-	SLOT      = "slot"
-	FLAGS     = "flags"
+	DATA_SIZE = "data_size"
 )
 
-// chan
+// 数据
 const (
 	DEV_DATA     = "dev.data"     // 数据
 	DEV_DATA_GET = "dev.data.get" // 读数据
