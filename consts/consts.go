@@ -6,6 +6,6 @@ const (
 )
 
 const (
-	RO = 1
-	RW = 2
+	RW = 1
+	RO = -1
 )

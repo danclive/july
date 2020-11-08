@@ -235,6 +235,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 		if slot != nil {
 			slot.Name = slots[i].Name
 			slot.Desc = slots[i].Desc
+			slot.Model = slots[i].Model
 			slot.Driver = slots[i].Driver
 			slot.Params = slots[i].Params
 			slot.Status = slots[i].Status
@@ -256,6 +257,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 			Id:     slots[i].Id,
 			Name:   slots[i].Name,
 			Desc:   slots[i].Desc,
+			Model:  slots[i].Model,
 			Driver: slots[i].Driver,
 			Params: slots[i].Params,
 			Status: slots[i].Status,
@@ -318,6 +320,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 	if slot2 != nil {
 		slot2.Name = slot.Name
 		slot2.Desc = slot.Desc
+		slot2.Model = slot.Model
 		slot2.Driver = slot.Driver
 		slot2.Params = slot.Params
 		slot2.Status = slot.Status
@@ -337,6 +340,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 			Id:     slot.Id,
 			Name:   slot.Name,
 			Desc:   slot.Desc,
+			Model:  slot.Model,
 			Driver: slot.Driver,
 			Params: slot.Params,
 			Status: slot.Status,

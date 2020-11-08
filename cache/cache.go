@@ -89,9 +89,13 @@ func (s *Service) GetTagByName(name string) (*device.Tag, error) {
 		return nil, err
 	}
 
+	if tag == nil {
+		return nil, errors.New("not found")
+	}
+
 	err = s.GetValue(tag)
 	if err != nil {
-		return nil, err
+		log.Suger.Error(err)
 	}
 
 	return tag, nil
@@ -106,7 +110,7 @@ func (s *Service) GetValue(tag *device.Tag) error {
 			bucket := tx.Bucket(bolt.CFG_BUCKET)
 			v := bucket.Get([]byte(tag.Id))
 			if v == nil {
-				return errors.New("not exist")
+				return fmt.Errorf("tag: %v(%v) not exit", tag.Name, tag.Id)
 			}
 
 			buffer := bytes.NewBuffer(v)
@@ -130,8 +134,7 @@ func (s *Service) GetValue(tag *device.Tag) error {
 		})
 
 		if err != nil {
-			log.Suger.Error("bolt.BoltDB.View:", err)
-			return err
+			log.Suger.Warn("bolt.BoltDB.View:", err)
 		}
 	default:
 		s.lock.RLock()
@@ -176,6 +179,10 @@ func (s *Service) SetValueByName(name string, value nson.Value) error {
 			return err
 		}
 
+		if tag == nil {
+			return errors.New("not found")
+		}
+
 		return s.SetValue(tag, value)
 	}
 
@@ -185,10 +192,18 @@ func (s *Service) SetValueByName(name string, value nson.Value) error {
 		return err
 	}
 
+	if tag == nil {
+		return errors.New("not found")
+	}
+
 	return s.SetValue(tag, value)
 }
 
 func (s *Service) SetValue(tag *device.Tag, value nson.Value) error {
+	if tag == nil {
+		return errors.New("tag in nil")
+	}
+
 	if tag.DefaultValue().Tag() != value.Tag() {
 		return fmt.Errorf("data type not match, expect: %v, provide: %v", tag.DefaultValue().Tag(), value.Tag())
 	}

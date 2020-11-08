@@ -37,6 +37,9 @@ type Service struct {
 
 func Run() {
 	log.Logger.Info("starting collect")
+
+	device.GetService().SlotReset("")
+
 	go _service.free()
 	go _service.read()
 }
@@ -57,6 +60,8 @@ func Stop() error {
 		delete(_service.drivers, slotId)
 		go driver.driver.Close()
 		driver.lock.Unlock()
+
+		device.GetService().SlotOffline(slotId)
 	}
 
 	return nil
@@ -70,6 +75,8 @@ func (c *Service) Reset(slotId string) {
 		delete(c.drivers, slotId)
 		go v.driver.Close()
 		v.lock.Unlock()
+
+		device.GetService().SlotOffline(slotId)
 	}
 	c.lock.Unlock()
 }
@@ -84,7 +91,7 @@ func (c *Service) Write(tags []device.Tag) error {
 
 	for _, tag := range tags {
 		if tag.SlotId != slotId {
-			return errors.New("要写入的标签必须为同一个 slot")
+			return errors.New("the tag to write to must be the same slot")
 		}
 
 		if tag.AccessMode != consts.RW {
@@ -102,7 +109,7 @@ func (c *Service) Write(tags []device.Tag) error {
 	}
 
 	if slot.Status != consts.ON {
-		return nil
+		return errors.New("slot don't enable")
 	}
 
 	c.lock.Lock()
@@ -111,6 +118,7 @@ func (c *Service) Write(tags []device.Tag) error {
 		go func() {
 			err := dw.write(tags)
 			if err != nil {
+				log.Suger.Error(err)
 				c.Reset(slotId)
 			}
 		}()
@@ -138,6 +146,7 @@ func (c *Service) Write(tags []device.Tag) error {
 		go func() {
 			err := dw.write(tags)
 			if err != nil {
+				log.Suger.Error(err)
 				c.Reset(slotId)
 			}
 		}()
@@ -190,6 +199,7 @@ func (c *Service) read() {
 				go func(slotId string, driver *driverWrap) {
 					err := driver.read(driver.tags)
 					if err != nil {
+						log.Suger.Error(err)
 						c.Reset(slotId)
 					}
 					//fmt.Println(driver.tags)
@@ -225,6 +235,8 @@ func (c *Service) connect() error {
 			if err != nil {
 				return err
 			}
+
+			device.GetService().SlotOnline(slot.Id)
 
 			tags, err := device.GetService().ListTagSimpleStatusOnAndIO(slot.Id)
 			if err != nil {

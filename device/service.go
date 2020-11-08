@@ -2,6 +2,7 @@ package device
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/danclive/july/consts"
 	"github.com/danclive/july/log"
@@ -27,6 +28,11 @@ func GetService() *Service {
 
 type Service struct {
 	*xorm.Engine
+	collect Collect
+}
+
+type Collect interface {
+	Reset(slotId string)
 }
 
 func (s *Service) Sync(force bool) error {
@@ -60,6 +66,10 @@ func (s *Service) Sync(force bool) error {
 	return nil
 }
 
+func (s *Service) SetCollect(c Collect) {
+	s.collect = c
+}
+
 func (s *Service) CreateSlot(params *Slot) (bool, error) {
 	if params.Id == "" {
 		params.Id = util.RandomID()
@@ -77,6 +87,10 @@ func (s *Service) CreateSlot(params *Slot) (bool, error) {
 		params.LinkStatus = consts.OFF
 	}
 
+	if params.Fault == 0 {
+		params.Fault = consts.OFF
+	}
+
 	_, err := s.InsertOne(params)
 
 	return true, err
@@ -85,7 +99,9 @@ func (s *Service) CreateSlot(params *Slot) (bool, error) {
 func (s *Service) UpdateSlot(params *Slot) (bool, error) {
 	_, err := s.ID(params.Id).Update(params)
 
-	// GetCollect().Reset(params.Id)
+	if s.collect != nil {
+		s.collect.Reset(params.Id)
+	}
 
 	return true, err
 }
@@ -110,7 +126,9 @@ func (s *Service) DeleteSlot(params *Slot) error {
 
 	err = session.Commit()
 
-	// GetCollect().Reset(params.Id)
+	if s.collect != nil {
+		s.collect.Reset(params.Id)
+	}
 
 	return err
 }
@@ -158,7 +176,9 @@ func (s *Service) CreateTag(params *Tag) (bool, error) {
 
 	_, err := s.InsertOne(params)
 
-	// GetCollect().Reset(params.SlotId)
+	if s.collect != nil {
+		s.collect.Reset(params.SlotId)
+	}
 
 	return true, err
 }
@@ -166,8 +186,9 @@ func (s *Service) CreateTag(params *Tag) (bool, error) {
 func (s *Service) UpdateTag(params *Tag) (bool, error) {
 	_, err := s.ID(params.Id).Update(params)
 
-	// GetCache().Delete(params.Name)
-	// GetCollect().Reset(params.SlotId)
+	if s.collect != nil {
+		s.collect.Reset(params.SlotId)
+	}
 
 	return true, err
 }
@@ -175,8 +196,9 @@ func (s *Service) UpdateTag(params *Tag) (bool, error) {
 func (s *Service) DeleteTag(params *Tag) error {
 	_, err := s.ID(params.Id).Delete(params)
 
-	// GetCache().Delete(params.Name)
-	// GetCollect().Reset(params.SlotId)
+	if s.collect != nil {
+		s.collect.Reset(params.SlotId)
+	}
 
 	return err
 }
@@ -286,15 +308,27 @@ type ListTagParams struct {
 
 func (s *Service) ListTag(params ListTagParams) ([]Tag, int64, error) {
 	items := make([]Tag, 0)
+	total := int64(0)
+	if params.Search != "" {
+		err := s.Where("slot_id = ?", params.SlotId).And(fmt.Sprintf("name LIKE '%%%s%%'", params.Search)).Limit(params.Limit, params.Start).Desc("order").Find(&items)
+		if err != nil {
+			return nil, 0, err
+		}
 
-	err := s.Where("slot_id = ?", params.SlotId).Limit(params.Limit, params.Start).Desc("order").Find(&items)
-	if err != nil {
-		return nil, 0, err
-	}
+		total, err = s.Where("slot_id = ?", params.SlotId).And(fmt.Sprintf("name LIKE '%%%s%%'", params.Search)).Count(&Tag{})
+		if err != nil {
+			return nil, 0, err
+		}
+	} else {
+		err := s.Where("slot_id = ?", params.SlotId).Limit(params.Limit, params.Start).Desc("order").Find(&items)
+		if err != nil {
+			return nil, 0, err
+		}
 
-	total, err := s.Where("slot_id = ?", params.SlotId).Count(&Tag{})
-	if err != nil {
-		return nil, 0, err
+		total, err = s.Where("slot_id = ?", params.SlotId).Count(&Tag{})
+		if err != nil {
+			return nil, 0, err
+		}
 	}
 
 	return items, total, nil
@@ -456,6 +490,51 @@ func (s *Service) SlotReset(driver string) error {
 		item.LinkStatus = consts.OFF
 
 		_, err := s.Update(item.Id, item)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Service) TagFn(fn string, ids []string) error {
+	for _, id := range ids {
+		tag, err := s.GetTag(id)
+		if err != nil {
+			return err
+		}
+
+		if tag == nil {
+			continue
+		}
+
+		switch fn {
+		case "on":
+			tag.Status = consts.ON
+		case "off":
+			tag.Status = consts.OFF
+		case "on_upload":
+			tag.Upload = consts.ON
+		case "off_upload":
+			tag.Upload = consts.OFF
+		case "on_save":
+			tag.Save = consts.ON
+		case "off_save":
+			tag.Save = consts.OFF
+		case "ro":
+			tag.AccessMode = consts.RO
+		case "rw":
+			tag.AccessMode = consts.RW
+		case "on_visible":
+			tag.Visible = consts.ON
+		case "off_visible":
+			tag.Visible = consts.OFF
+		default:
+			return errors.New("not support")
+		}
+
+		_, err = s.UpdateTag(tag)
 		if err != nil {
 			return err
 		}

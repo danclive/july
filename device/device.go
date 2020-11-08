@@ -12,6 +12,8 @@ type Slot struct {
 	Id         string      `xorm:"pk 'id'" json:"id"`
 	Name       string      `xorm:"'name'" json:"name"`
 	Desc       string      `xorm:"'desc'" json:"desc"`
+	Sn         string      `xorm:"'sn'" json:"sn"`         // 序列号
+	Model      string      `xorm:"'model'" json:"model"`   // 模型
 	Driver     string      `xorm:"'driver'" json:"driver"` // 驱动 S7-TCP, MODBUS-TCP, MQTT
 	Params     string      `xorm:"'params'" json:"params"` // 参数
 	LinkStatus int32       `xorm:"'link'" json:"link"`     // 连接状态，1: ON，-1: OFF
@@ -38,7 +40,7 @@ type Tag struct {
 	DataType   string      `xorm:"'dtype'" json:"dtype"`     // 数据类型
 	Format     string      `xorm:"'format'" json:"format"`   // 数据格式化
 	Address    string      `xorm:"'address'" json:"address"` // 寄存器
-	AccessMode int32       `xorm:"'access'" json:"access"`   // 读写数据模式， 1: RO，2: RW
+	AccessMode int32       `xorm:"'access'" json:"access"`   // 读写数据模式， 1: RW，-1: RO
 	Upload     int32       `xorm:"'upload'" json:"upload"`   // 上传数据，1: ON，-1: OFF
 	Save       int32       `xorm:"'save'" json:"save"`       // 保存数据，1: ON，-1: OFF
 	Visible    int32       `xorm:"'visible'" json:"visible"` // 可见性，1: ON，-1: OFF
