@@ -5,11 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/danclive/july/dict"
+	"github.com/danclive/july/cache"
+	"github.com/danclive/july/consts"
+	"github.com/danclive/july/device"
 	"github.com/danclive/july/log"
 	"github.com/danclive/july/mqtt"
 	"github.com/danclive/july/mqttc"
-	"github.com/danclive/july/slot"
 	"github.com/danclive/july/util"
 	"github.com/danclive/nson-go"
 )
@@ -68,14 +69,14 @@ func (s *Service) run(interval int) {
 			return
 		case ts := <-ticker.C:
 			func(ts time.Time) {
-				cache := slot.GetCache()
+				cache := cache.GetService()
 				mqttclient := mqttc.GetClient()
 				if mqttclient == nil {
 					log.Suger.Error("mqtt client not connect")
 					return
 				}
 
-				tags, err := slot.GetService().ListTagForUpload()
+				tags, err := device.GetService().ListTagForUpload()
 				if err != nil {
 					log.Suger.Errorf("ListTagForUpload(): %s", err)
 					return
@@ -86,12 +87,9 @@ func (s *Service) run(interval int) {
 				data := nson.Array{}
 
 				for i := 0; i < len(tags); i++ {
-					value, has := cache.GetValue(tags[i].Name)
-					if !has {
-						continue
-					}
-
-					if value == nil {
+					err := cache.GetValue(&tags[i])
+					if err != nil {
+						log.Suger.Error(err)
 						continue
 					}
 
@@ -101,7 +99,7 @@ func (s *Service) run(interval int) {
 					}
 
 					data.Push(k)
-					data.Push(value)
+					data.Push(tags[i].Value)
 				}
 
 				if len(data) == 0 {
@@ -123,7 +121,7 @@ func (s *Service) run(interval int) {
 					return
 				}
 
-				token := mqttclient.Publish(dict.DEV_DATA, 0, false, buffer.Bytes())
+				token := mqttclient.Publish(consts.DEV_DATA, 0, false, buffer.Bytes())
 				if !token.WaitTimeout(time.Second * 10) {
 					log.Suger.Error("Publish timeout")
 				}

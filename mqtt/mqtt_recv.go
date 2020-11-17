@@ -7,7 +7,6 @@ import (
 	"github.com/danclive/july/collect"
 	"github.com/danclive/july/consts"
 	"github.com/danclive/july/device"
-	"github.com/danclive/july/dict"
 	"github.com/danclive/july/log"
 	"github.com/danclive/july/util"
 	"github.com/danclive/mqtt"
@@ -49,7 +48,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 	// 	zap.String("topic", msg.Topic()),
 	// )
 
-	if msg.Topic() == dict.DEV_DATA {
+	if msg.Topic() == consts.DEV_DATA {
 		reader := bytes.NewBuffer(msg.Payload())
 
 		flags, err := util.ReadUint16(reader)
@@ -57,7 +56,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 			log.Suger.Errorf("read flags: %s", err)
 		}
 
-		client.Set(dict.FLAGS, nson.U32(flags))
+		client.Set(consts.FLAGS, nson.U32(flags))
 
 		if flags == 0 {
 			message := map[string]interface{}{}
@@ -68,7 +67,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 				return
 			}
 
-			if data, ok := message[dict.DATA]; ok {
+			if data, ok := message[consts.DATA]; ok {
 				if dataMessage, ok := data.(map[string]interface{}); ok {
 
 					// 查询设备
@@ -162,9 +161,9 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 				return
 			}
 
-			data, err := message.GetMessage(dict.DATA)
+			data, err := message.GetMessage(consts.DATA)
 			if err != nil {
-				log.Suger.Errorf("message.GetMessage(dict.DATA): %s", err)
+				log.Suger.Errorf("message.GetMessage(consts.DATA): %s", err)
 				return
 			}
 

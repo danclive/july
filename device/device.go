@@ -80,6 +80,10 @@ const (
 	TypeString = "STRING"
 )
 
+const (
+	DefaultSlotName = "default"
+)
+
 func (t *Tag) DefaultValue() nson.Value {
 	switch t.DataType {
 	case TypeI8, TypeI16, TypeI32:

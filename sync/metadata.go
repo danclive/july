@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/danclive/july/consts"
 	"github.com/danclive/july/device"
-	"github.com/danclive/july/dict"
 	"github.com/danclive/july/log"
 	"github.com/danclive/nson-go"
 	"github.com/danclive/queen-go/client"
@@ -14,7 +14,7 @@ import (
 func SyncMetadata(_ *client.Client, recv *client.RecvMessage, back *client.SendMessage) {
 	//fmt.Println(recv)
 
-	data, err := recv.Body.GetMessage(dict.DATA)
+	data, err := recv.Body.GetMessage(consts.DATA)
 	if err != nil {
 		return
 	}
@@ -22,26 +22,26 @@ func SyncMetadata(_ *client.Client, recv *client.RecvMessage, back *client.SendM
 	back2 := syncMetadata(data)
 
 	if back != nil {
-		back.Body().Insert(dict.DATA, back2)
+		back.Body().Insert(consts.DATA, back2)
 	}
 }
 
 func syncMetadata(recv nson.Message) nson.Message {
-	method, err := recv.GetString(dict.METHOD)
+	method, err := recv.GetString(consts.METHOD)
 	if err != nil {
-		log.Suger.Errorf("recv.GetString(dict.METHOD): %s", err)
+		log.Suger.Errorf("recv.GetString(consts.METHOD): %s", err)
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
-	params, err := recv.GetMessage(dict.PARAMS)
+	params, err := recv.GetMessage(consts.PARAMS)
 	if err != nil {
-		log.Suger.Errorf("recv.GetMessage(dict.PARAMS): %s", err)
+		log.Suger.Errorf("recv.GetMessage(consts.PARAMS): %s", err)
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -68,8 +68,8 @@ func syncMetadata(recv nson.Message) nson.Message {
 		return deleteTag(params, recv)
 	default:
 		return nson.Message{
-			dict.CODE:  nson.I32(404),
-			dict.ERROR: nson.String("Not Found"),
+			consts.CODE:  nson.I32(404),
+			consts.ERROR: nson.String("Not Found"),
 		}
 	}
 }
@@ -78,22 +78,22 @@ func pullSlots(params, recv nson.Message) nson.Message {
 	slots, err := device.GetService().ListSlotSimple()
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	bytes, err := json.Marshal(slots)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
-		dict.DATA: nson.Binary(bytes),
+		consts.CODE: nson.I32(0),
+		consts.DATA: nson.Binary(bytes),
 	}
 }
 
@@ -101,37 +101,37 @@ func pullSlot(params, recv nson.Message) nson.Message {
 	slotId, err := params.GetString("slotId")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	slot, err := device.GetService().GetSlot(slotId)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	if slot == nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(404),
-			dict.ERROR: nson.String("Not Found"),
+			consts.CODE:  nson.I32(404),
+			consts.ERROR: nson.String("Not Found"),
 		}
 	}
 
 	bytes, err := json.Marshal(&slot)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
-		dict.DATA: nson.Binary(bytes),
+		consts.CODE: nson.I32(0),
+		consts.DATA: nson.Binary(bytes),
 	}
 }
 
@@ -139,30 +139,30 @@ func pullTags(params, recv nson.Message) nson.Message {
 	slotId, err := params.GetString("slotId")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	tags, err := device.GetService().ListTagSimple(slotId)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	bytes, err := json.Marshal(tags)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
-		dict.DATA: nson.Binary(bytes),
+		consts.CODE: nson.I32(0),
+		consts.DATA: nson.Binary(bytes),
 	}
 }
 
@@ -170,37 +170,37 @@ func pullTag(params, recv nson.Message) nson.Message {
 	tagId, err := params.GetString("tagId")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	tag, err := device.GetService().GetTag(tagId)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	if tag == nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(404),
-			dict.ERROR: nson.String("Not Found"),
+			consts.CODE:  nson.I32(404),
+			consts.ERROR: nson.String("Not Found"),
 		}
 	}
 
 	bytes, err := json.Marshal(&tag)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
-		dict.DATA: nson.Binary(bytes),
+		consts.CODE: nson.I32(0),
+		consts.DATA: nson.Binary(bytes),
 	}
 }
 
@@ -208,8 +208,8 @@ func pushSlots(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("slots")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -218,8 +218,8 @@ func pushSlots(params, recv nson.Message) nson.Message {
 	err = json.Unmarshal(data, &slots)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -227,8 +227,8 @@ func pushSlots(params, recv nson.Message) nson.Message {
 		slot, err := device.GetService().GetSlot(slots[i].Id)
 		if err != nil {
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 
@@ -244,8 +244,8 @@ func pushSlots(params, recv nson.Message) nson.Message {
 			_, err := device.GetService().UpdateSlot(slot)
 			if err != nil {
 				return nson.Message{
-					dict.CODE:  nson.I32(500),
-					dict.ERROR: nson.String(err.Error()),
+					consts.CODE:  nson.I32(500),
+					consts.ERROR: nson.String(err.Error()),
 				}
 			}
 
@@ -270,8 +270,8 @@ func pushSlots(params, recv nson.Message) nson.Message {
 				err = device.GetService().DeleteForce(slot2.Id, &slot2)
 				if err != nil {
 					return nson.Message{
-						dict.CODE:  nson.I32(500),
-						dict.ERROR: nson.String(err.Error()),
+						consts.CODE:  nson.I32(500),
+						consts.ERROR: nson.String(err.Error()),
 					}
 				}
 
@@ -279,14 +279,14 @@ func pushSlots(params, recv nson.Message) nson.Message {
 			}
 
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
+		consts.CODE: nson.I32(0),
 	}
 }
 
@@ -294,8 +294,8 @@ func pushSlot(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("slot")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -304,16 +304,16 @@ func pushSlot(params, recv nson.Message) nson.Message {
 	err = json.Unmarshal(data, &slot)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	slot2, err := device.GetService().GetSlot(slot.Id)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -329,8 +329,8 @@ func pushSlot(params, recv nson.Message) nson.Message {
 		_, err := device.GetService().UpdateSlot(slot2)
 		if err != nil {
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 	} else {
@@ -353,8 +353,8 @@ func pushSlot(params, recv nson.Message) nson.Message {
 				err = device.GetService().DeleteForce(slot3.Id, &slot3)
 				if err != nil {
 					return nson.Message{
-						dict.CODE:  nson.I32(500),
-						dict.ERROR: nson.String(err.Error()),
+						consts.CODE:  nson.I32(500),
+						consts.ERROR: nson.String(err.Error()),
 					}
 				}
 
@@ -362,14 +362,14 @@ func pushSlot(params, recv nson.Message) nson.Message {
 			}
 
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
+		consts.CODE: nson.I32(0),
 	}
 }
 
@@ -377,36 +377,36 @@ func deleteSlot(params, recv nson.Message) nson.Message {
 	slotId, err := params.GetString("slotId")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	slot, err := device.GetService().GetSlot(slotId)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	if slot == nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(404),
-			dict.ERROR: nson.String("Not Found"),
+			consts.CODE:  nson.I32(404),
+			consts.ERROR: nson.String("Not Found"),
 		}
 	}
 
 	err = device.GetService().DeleteSlot(slot)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
+		consts.CODE: nson.I32(0),
 	}
 }
 
@@ -414,8 +414,8 @@ func pushTags(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("tags")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -424,8 +424,8 @@ func pushTags(params, recv nson.Message) nson.Message {
 	err = json.Unmarshal(data, &tags)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -433,8 +433,8 @@ func pushTags(params, recv nson.Message) nson.Message {
 		tag, err := device.GetService().GetTag(tags[i].Id)
 		if err != nil {
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 
@@ -456,8 +456,8 @@ func pushTags(params, recv nson.Message) nson.Message {
 			_, err := device.GetService().UpdateTag(tag)
 			if err != nil {
 				return nson.Message{
-					dict.CODE:  nson.I32(500),
-					dict.ERROR: nson.String(err.Error()),
+					consts.CODE:  nson.I32(500),
+					consts.ERROR: nson.String(err.Error()),
 				}
 			}
 
@@ -489,8 +489,8 @@ func pushTags(params, recv nson.Message) nson.Message {
 				err = device.GetService().DeleteForce(tag2.Id, &tag2)
 				if err != nil {
 					return nson.Message{
-						dict.CODE:  nson.I32(500),
-						dict.ERROR: nson.String(err.Error()),
+						consts.CODE:  nson.I32(500),
+						consts.ERROR: nson.String(err.Error()),
 					}
 				}
 
@@ -498,14 +498,14 @@ func pushTags(params, recv nson.Message) nson.Message {
 			}
 
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
+		consts.CODE: nson.I32(0),
 	}
 }
 
@@ -513,8 +513,8 @@ func pushTag(params, recv nson.Message) nson.Message {
 	data, err := params.GetBinary("tag")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -522,16 +522,16 @@ func pushTag(params, recv nson.Message) nson.Message {
 	err = json.Unmarshal(data, &tag)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	tag2, err := device.GetService().GetTag(tag.Id)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
@@ -553,8 +553,8 @@ func pushTag(params, recv nson.Message) nson.Message {
 		_, err := device.GetService().UpdateTag(tag2)
 		if err != nil {
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 	} else {
@@ -584,8 +584,8 @@ func pushTag(params, recv nson.Message) nson.Message {
 				err = device.GetService().DeleteForce(tag3.Id, &tag3)
 				if err != nil {
 					return nson.Message{
-						dict.CODE:  nson.I32(500),
-						dict.ERROR: nson.String(err.Error()),
+						consts.CODE:  nson.I32(500),
+						consts.ERROR: nson.String(err.Error()),
 					}
 				}
 
@@ -593,14 +593,14 @@ func pushTag(params, recv nson.Message) nson.Message {
 			}
 
 			return nson.Message{
-				dict.CODE:  nson.I32(500),
-				dict.ERROR: nson.String(err.Error()),
+				consts.CODE:  nson.I32(500),
+				consts.ERROR: nson.String(err.Error()),
 			}
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
+		consts.CODE: nson.I32(0),
 	}
 }
 
@@ -608,35 +608,35 @@ func deleteTag(params, recv nson.Message) nson.Message {
 	tagId, err := params.GetString("tagId")
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(400),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(400),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	tag, err := device.GetService().GetTag(tagId)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	if tag == nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(404),
-			dict.ERROR: nson.String("Not Found"),
+			consts.CODE:  nson.I32(404),
+			consts.ERROR: nson.String("Not Found"),
 		}
 	}
 
 	err = device.GetService().DeleteTag(tag)
 	if err != nil {
 		return nson.Message{
-			dict.CODE:  nson.I32(500),
-			dict.ERROR: nson.String(err.Error()),
+			consts.CODE:  nson.I32(500),
+			consts.ERROR: nson.String(err.Error()),
 		}
 	}
 
 	return nson.Message{
-		dict.CODE: nson.I32(0),
+		consts.CODE: nson.I32(0),
 	}
 }

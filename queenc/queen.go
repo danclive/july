@@ -1,7 +1,7 @@
 package queenc
 
 import (
-	"github.com/danclive/july/dict"
+	"github.com/danclive/july/consts"
 	"github.com/danclive/july/log"
 	"github.com/danclive/nson-go"
 	"github.com/danclive/queen-go/client"
@@ -21,7 +21,7 @@ func InitService(options client.Options) {
 		log.Suger.Debug(recv)
 
 		if back != nil {
-			back.Body().Insert(dict.DATA, nson.Message{dict.CODE: nson.I32(0)})
+			back.Body().Insert(consts.DATA, nson.Message{consts.CODE: nson.I32(0)})
 		}
 	})
 }
@@ -87,12 +87,12 @@ func (q *Service) onRecv(c *client.Client, recv client.RecvMessage) {
 		}
 	} else {
 		msg := nson.Message{
-			dict.CODE:  nson.I32(404),
-			dict.ERROR: nson.String("Not Found"),
+			consts.CODE:  nson.I32(404),
+			consts.ERROR: nson.String("Not Found"),
 		}
 
 		if back != nil {
-			back.Body().Insert(dict.DATA, msg)
+			back.Body().Insert(consts.DATA, msg)
 		}
 	}
 
