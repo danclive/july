@@ -132,7 +132,7 @@ func (c *Service) Write(tags []device.Tag) error {
 			return err
 		}
 
-		tags, err := device.GetService().ListTagSimpleStatusOnAndIO(slot.Id)
+		tags, err := device.GetService().ListTagStatusOnAndTypeIO(slot.ID)
 		if err != nil {
 			return err
 		}
@@ -205,7 +205,7 @@ func (c *Service) read() {
 					//fmt.Println(driver.tags)
 
 					for i := 0; i < len(driver.tags); i++ {
-						CacheSet(driver.tags[i].Id, driver.tags[i].Value)
+						CacheSet(driver.tags[i].ID, driver.tags[i].Value)
 					}
 				}(slotId, driver)
 			}
@@ -216,7 +216,7 @@ func (c *Service) read() {
 }
 
 func (c *Service) connect() error {
-	slots, err := device.GetService().ListSlotSimpleStatusOn()
+	slots, err := device.GetService().ListSlotStatusOn()
 	if err != nil {
 		return err
 	}
@@ -226,7 +226,7 @@ func (c *Service) connect() error {
 	defer c.lock.Unlock()
 
 	for _, slot := range slots {
-		if _, ok := c.drivers[slot.Id]; ok {
+		if _, ok := c.drivers[slot.ID]; ok {
 			continue
 		}
 
@@ -236,9 +236,9 @@ func (c *Service) connect() error {
 				return err
 			}
 
-			device.GetService().SlotOnline(slot.Id)
+			device.GetService().SlotOnline(slot.ID)
 
-			tags, err := device.GetService().ListTagSimpleStatusOnAndIO(slot.Id)
+			tags, err := device.GetService().ListTagStatusOnAndTypeIO(slot.ID)
 			if err != nil {
 				return err
 			}
@@ -249,7 +249,7 @@ func (c *Service) connect() error {
 				tags:    tags,
 			}
 
-			c.drivers[slot.Id] = dw
+			c.drivers[slot.ID] = dw
 		}
 	}
 

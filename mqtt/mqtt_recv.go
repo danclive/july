@@ -141,7 +141,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 
 						if value2 != nil {
 							// 缓存
-							collect.CacheSet(tag.Id, value2)
+							collect.CacheSet(tag.ID, value2)
 						}
 					}
 
@@ -239,7 +239,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 				}
 
 				// 缓存
-				collect.CacheSet(tag.Id, v)
+				collect.CacheSet(tag.ID, v)
 			}
 		}
 

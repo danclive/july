@@ -70,7 +70,7 @@ func (s *Service) GetTagByName(name string) (*device.Tag, error) {
 			return nil, err
 		}
 
-		tag, err := device.GetService().GetTagBySlotIdAndName(slot.Id, split[1])
+		tag, err := device.GetService().GetTagBySlotIdAndName(slot.ID, split[1])
 		if err != nil {
 			return nil, err
 		}
@@ -104,13 +104,13 @@ func (s *Service) GetTagByName(name string) (*device.Tag, error) {
 func (s *Service) GetValue(tag *device.Tag) error {
 	switch tag.Type {
 	case device.TypeIO:
-		tag.Value = collect.CacheGet(tag.Id)
+		tag.Value = collect.CacheGet(tag.ID)
 	case device.TypeCFG:
 		err := bolt.GetBoltDB().View(func(tx *bbolt.Tx) error {
 			bucket := tx.Bucket(bolt.CFG_BUCKET)
-			v := bucket.Get([]byte(tag.Id))
+			v := bucket.Get([]byte(tag.ID))
 			if v == nil {
-				return fmt.Errorf("tag: %v(%v) not exit", tag.Name, tag.Id)
+				return fmt.Errorf("tag: %v(%v) not exit", tag.Name, tag.ID)
 			}
 
 			buffer := bytes.NewBuffer(v)
@@ -139,7 +139,7 @@ func (s *Service) GetValue(tag *device.Tag) error {
 	default:
 		s.lock.RLock()
 		defer s.lock.RUnlock()
-		tag.Value = s.cache[tag.Id]
+		tag.Value = s.cache[tag.ID]
 	}
 
 	if tag.Value == nil {
@@ -174,7 +174,7 @@ func (s *Service) SetValueByName(name string, value nson.Value) error {
 			return err
 		}
 
-		tag, err := device.GetService().GetTagBySlotIdAndName(slot.Id, split[1])
+		tag, err := device.GetService().GetTagBySlotIdAndName(slot.ID, split[1])
 		if err != nil {
 			return err
 		}
@@ -228,7 +228,7 @@ func (s *Service) SetValue(tag *device.Tag, value nson.Value) error {
 				return err
 			}
 
-			return b.Put([]byte(tag.Id), buffer.Bytes())
+			return b.Put([]byte(tag.ID), buffer.Bytes())
 		})
 
 		if err != nil {
@@ -238,7 +238,7 @@ func (s *Service) SetValue(tag *device.Tag, value nson.Value) error {
 	default:
 		s.lock.Lock()
 		defer s.lock.Unlock()
-		s.cache[tag.Id] = value
+		s.cache[tag.ID] = value
 	}
 
 	return nil

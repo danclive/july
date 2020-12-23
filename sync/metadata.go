@@ -75,7 +75,7 @@ func syncMetadata(recv nson.Message) nson.Message {
 }
 
 func pullSlots(params, recv nson.Message) nson.Message {
-	slots, err := device.GetService().ListSlotSimple()
+	slots, err := device.GetService().ListSlot()
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -144,7 +144,7 @@ func pullTags(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tags, err := device.GetService().ListTagSimple(slotId)
+	tags, err := device.GetService().ListTag(slotId)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -224,7 +224,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 	}
 
 	for i := 0; i < len(slots); i++ {
-		slot, err := device.GetService().GetSlot(slots[i].Id)
+		slot, err := device.GetService().GetSlot(slots[i].ID)
 		if err != nil {
 			return nson.Message{
 				consts.CODE:  nson.I32(500),
@@ -254,7 +254,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 
 	NEW:
 		slot2 := device.Slot{
-			Id:     slots[i].Id,
+			ID:     slots[i].ID,
 			Name:   slots[i].Name,
 			Desc:   slots[i].Desc,
 			Model:  slots[i].Model,
@@ -267,7 +267,7 @@ func pushSlots(params, recv nson.Message) nson.Message {
 		_, err = device.GetService().CreateSlot(&slot2)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(slot2.Id, &slot2)
+				err = device.GetService().DeleteForce(slot2.ID, &slot2)
 				if err != nil {
 					return nson.Message{
 						consts.CODE:  nson.I32(500),
@@ -309,7 +309,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot2, err := device.GetService().GetSlot(slot.Id)
+	slot2, err := device.GetService().GetSlot(slot.ID)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -337,7 +337,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 
 	NEW:
 		slot3 := device.Slot{
-			Id:     slot.Id,
+			ID:     slot.ID,
 			Name:   slot.Name,
 			Desc:   slot.Desc,
 			Model:  slot.Model,
@@ -350,7 +350,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 		_, err = device.GetService().CreateSlot(&slot3)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(slot3.Id, &slot3)
+				err = device.GetService().DeleteForce(slot3.ID, &slot3)
 				if err != nil {
 					return nson.Message{
 						consts.CODE:  nson.I32(500),
@@ -430,7 +430,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 	}
 
 	for i := 0; i < len(tags); i++ {
-		tag, err := device.GetService().GetTag(tags[i].Id)
+		tag, err := device.GetService().GetTag(tags[i].ID)
 		if err != nil {
 			return nson.Message{
 				consts.CODE:  nson.I32(500),
@@ -466,7 +466,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 
 	NEW:
 		tag2 := device.Tag{
-			Id:         tags[i].Id,
+			ID:         tags[i].ID,
 			SlotId:     tags[i].SlotId,
 			Name:       tags[i].Name,
 			Desc:       tags[i].Desc,
@@ -486,7 +486,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 		_, err = device.GetService().CreateTag(&tag2)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(tag2.Id, &tag2)
+				err = device.GetService().DeleteForce(tag2.ID, &tag2)
 				if err != nil {
 					return nson.Message{
 						consts.CODE:  nson.I32(500),
@@ -527,7 +527,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag2, err := device.GetService().GetTag(tag.Id)
+	tag2, err := device.GetService().GetTag(tag.ID)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -561,7 +561,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 
 	NEW:
 		tag3 := device.Tag{
-			Id:         tag.Id,
+			ID:         tag.ID,
 			SlotId:     tag.SlotId,
 			Name:       tag.Name,
 			Desc:       tag.Desc,
@@ -581,7 +581,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 		_, err = device.GetService().CreateTag(&tag3)
 		if err != nil {
 			if strings.HasPrefix(err.Error(), "UNIQUE constraint failed:") {
-				err = device.GetService().DeleteForce(tag3.Id, &tag3)
+				err = device.GetService().DeleteForce(tag3.ID, &tag3)
 				if err != nil {
 					return nson.Message{
 						consts.CODE:  nson.I32(500),

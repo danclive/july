@@ -9,11 +9,10 @@ import (
 )
 
 type Slot struct {
-	Id         string      `xorm:"pk 'id'" json:"id"`
+	ID         string      `xorm:"pk 'id'" json:"id"`
 	Name       string      `xorm:"'name'" json:"name"`
 	Desc       string      `xorm:"'desc'" json:"desc"`
-	Sn         string      `xorm:"'sn'" json:"sn"`         // 序列号
-	Model      string      `xorm:"'model'" json:"model"`   // 模型
+	Model      string      `xorm:"'model'" json:"model"`   // 型号
 	Driver     string      `xorm:"'driver'" json:"driver"` // 驱动 S7-TCP, MODBUS-TCP, MQTT
 	Params     string      `xorm:"'params'" json:"params"` // 参数
 	LinkStatus int32       `xorm:"'link'" json:"link"`     // 连接状态，1: ON，-1: OFF
@@ -31,7 +30,7 @@ func (*Slot) TableName() string {
 }
 
 type Tag struct {
-	Id         string      `xorm:"pk 'id'" json:"id"`
+	ID         string      `xorm:"pk 'id'" json:"id"`
 	SlotId     string      `xorm:"slot_id" json:"slot_id"`
 	Name       string      `xorm:"'name'" json:"name"`
 	Desc       string      `xorm:"'desc'" json:"desc"`

@@ -76,7 +76,7 @@ func (s *Service) run(interval int) {
 					return
 				}
 
-				tags, err := device.GetService().ListTagForUpload()
+				tags, err := device.GetService().ListTagAndUpload()
 				if err != nil {
 					log.Suger.Errorf("ListTagForUpload(): %s", err)
 					return

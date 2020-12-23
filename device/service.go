@@ -71,8 +71,8 @@ func (s *Service) SetCollect(c Collect) {
 }
 
 func (s *Service) CreateSlot(params *Slot) (bool, error) {
-	if params.Id == "" {
-		params.Id = util.RandomID()
+	if params.ID == "" {
+		params.ID = util.RandomID()
 	}
 
 	if params.Name == "" {
@@ -97,10 +97,10 @@ func (s *Service) CreateSlot(params *Slot) (bool, error) {
 }
 
 func (s *Service) UpdateSlot(params *Slot) (bool, error) {
-	_, err := s.ID(params.Id).Update(params)
+	_, err := s.ID(params.ID).Update(params)
 
 	if s.collect != nil {
-		s.collect.Reset(params.Id)
+		s.collect.Reset(params.ID)
 	}
 
 	return true, err
@@ -112,13 +112,13 @@ func (s *Service) DeleteSlot(params *Slot) error {
 	session := s.NewSession()
 	defer session.Close()
 
-	_, err = session.ID(params.Id).Delete(params)
+	_, err = session.ID(params.ID).Delete(params)
 	if err != nil {
 		session.Rollback()
 		return err
 	}
 
-	_, err = session.Delete(&Tag{SlotId: params.Id})
+	_, err = session.Delete(&Tag{SlotId: params.ID})
 	if err != nil {
 		session.Rollback()
 		return err
@@ -127,15 +127,15 @@ func (s *Service) DeleteSlot(params *Slot) error {
 	err = session.Commit()
 
 	if s.collect != nil {
-		s.collect.Reset(params.Id)
+		s.collect.Reset(params.ID)
 	}
 
 	return err
 }
 
 func (s *Service) CreateTag(params *Tag) (bool, error) {
-	if params.Id == "" {
-		params.Id = util.RandomID()
+	if params.ID == "" {
+		params.ID = util.RandomID()
 	}
 
 	if params.SlotId == "" {
@@ -184,7 +184,7 @@ func (s *Service) CreateTag(params *Tag) (bool, error) {
 }
 
 func (s *Service) UpdateTag(params *Tag) (bool, error) {
-	_, err := s.ID(params.Id).Update(params)
+	_, err := s.ID(params.ID).Update(params)
 
 	if s.collect != nil {
 		s.collect.Reset(params.SlotId)
@@ -194,7 +194,7 @@ func (s *Service) UpdateTag(params *Tag) (bool, error) {
 }
 
 func (s *Service) DeleteTag(params *Tag) error {
-	_, err := s.ID(params.Id).Delete(params)
+	_, err := s.ID(params.ID).Delete(params)
 
 	if s.collect != nil {
 		s.collect.Reset(params.SlotId)
@@ -205,7 +205,7 @@ func (s *Service) DeleteTag(params *Tag) error {
 
 // list
 
-func (s *Service) ListSlotSimple() ([]Slot, error) {
+func (s *Service) ListSlot() ([]Slot, error) {
 	items := make([]Slot, 0)
 
 	err := s.Find(&items)
@@ -216,7 +216,7 @@ func (s *Service) ListSlotSimple() ([]Slot, error) {
 	return items, nil
 }
 
-func (s *Service) ListSlotSimpleStatusOn() ([]Slot, error) {
+func (s *Service) ListSlotStatusOn() ([]Slot, error) {
 	items := make([]Slot, 0)
 
 	err := s.Where("status = ?", consts.ON).Find(&items)
@@ -227,7 +227,7 @@ func (s *Service) ListSlotSimpleStatusOn() ([]Slot, error) {
 	return items, nil
 }
 
-func (s *Service) ListSlot(params util.ListParams) ([]Slot, int64, error) {
+func (s *Service) ListSlot2(params util.ListParams) ([]Slot, int64, error) {
 	items := make([]Slot, 0)
 
 	err := s.Limit(params.Limit, params.Start).Desc("order").Find(&items)
@@ -243,7 +243,7 @@ func (s *Service) ListSlot(params util.ListParams) ([]Slot, int64, error) {
 	return items, total, nil
 }
 
-func (s *Service) ListTagSimple(slotId string) ([]Tag, error) {
+func (s *Service) ListTag(slotId string) ([]Tag, error) {
 	items := make([]Tag, 0)
 
 	err := s.Where("slot_id = ?", slotId).Find(&items)
@@ -254,7 +254,7 @@ func (s *Service) ListTagSimple(slotId string) ([]Tag, error) {
 	return items, nil
 }
 
-func (s *Service) ListTagSimpleStatusOnAndIO(slotId string) ([]Tag, error) {
+func (s *Service) ListTagStatusOnAndTypeIO(slotId string) ([]Tag, error) {
 	items := make([]Tag, 0)
 
 	err := s.Where("slot_id = ?", slotId).And("type = ?", TypeIO).And("status = ?", consts.ON).Find(&items)
@@ -265,8 +265,8 @@ func (s *Service) ListTagSimpleStatusOnAndIO(slotId string) ([]Tag, error) {
 	return items, nil
 }
 
-func (s *Service) ListTagForHisData() ([]Tag, error) {
-	slots, err := s.ListSlotSimpleStatusOn()
+func (s *Service) ListTagAndSave() ([]Tag, error) {
+	slots, err := s.ListSlotStatusOn()
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +274,7 @@ func (s *Service) ListTagForHisData() ([]Tag, error) {
 	items := make([]Tag, 0)
 
 	for i := 0; i < len(slots); i++ {
-		err = s.Where("slot_id = ?", slots[i].Id).And("status = ?", consts.ON).And("save = ?", consts.ON).Find(&items)
+		err = s.Where("slot_id = ?", slots[i].ID).And("status = ?", consts.ON).And("save = ?", consts.ON).Find(&items)
 		if err != nil {
 			return nil, err
 		}
@@ -283,8 +283,8 @@ func (s *Service) ListTagForHisData() ([]Tag, error) {
 	return items, nil
 }
 
-func (s *Service) ListTagForUpload() ([]Tag, error) {
-	slots, err := s.ListSlotSimpleStatusOn()
+func (s *Service) ListTagAndUpload() ([]Tag, error) {
+	slots, err := s.ListSlotStatusOn()
 	if err != nil {
 		return nil, err
 	}
@@ -292,7 +292,7 @@ func (s *Service) ListTagForUpload() ([]Tag, error) {
 	items := make([]Tag, 0)
 
 	for i := 0; i < len(slots); i++ {
-		err = s.Where("slot_id = ?", slots[i].Id).And("status = ?", consts.ON).And("upload = ?", consts.ON).Find(&items)
+		err = s.Where("slot_id = ?", slots[i].ID).And("status = ?", consts.ON).And("upload = ?", consts.ON).Find(&items)
 		if err != nil {
 			return nil, err
 		}
@@ -306,7 +306,7 @@ type ListTagParams struct {
 	SlotId string `form:"slot_id" json:"slot_id"`
 }
 
-func (s *Service) ListTag(params ListTagParams) ([]Tag, int64, error) {
+func (s *Service) ListTag2(params ListTagParams) ([]Tag, int64, error) {
 	items := make([]Tag, 0)
 	total := int64(0)
 	if params.Search != "" {
@@ -450,7 +450,7 @@ func (s *Service) SlotOnline(id string) error {
 
 	slot.LinkStatus = consts.ON
 
-	_, err = s.ID(slot.Id).Update(slot)
+	_, err = s.ID(slot.ID).Update(slot)
 
 	return err
 }
@@ -467,7 +467,7 @@ func (s *Service) SlotOffline(id string) error {
 
 	slot.LinkStatus = consts.OFF
 
-	_, err = s.ID(slot.Id).Update(slot)
+	_, err = s.ID(slot.ID).Update(slot)
 
 	return err
 }
@@ -489,7 +489,7 @@ func (s *Service) SlotReset(driver string) error {
 	for _, item := range items {
 		item.LinkStatus = consts.OFF
 
-		_, err := s.Update(item.Id, item)
+		_, err := s.Update(item.ID, item)
 		if err != nil {
 			return err
 		}
