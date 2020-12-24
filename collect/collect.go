@@ -12,14 +12,15 @@ import (
 
 var _service *Service
 
-func InitService(readInterval int, keepalive int) {
+func InitService(readInterval int, keepalive int, connectInterval int) {
 	initCache()
 
 	_service = &Service{
-		keepalive:    time.Second * time.Duration(keepalive),
-		readInterval: time.Second * time.Duration(readInterval),
-		drivers:      make(map[string]*driverWrap),
-		close:        make(chan struct{}),
+		keepalive:       time.Second * time.Duration(keepalive),
+		connectInterval: time.Second * time.Duration(connectInterval),
+		readInterval:    time.Second * time.Duration(readInterval),
+		drivers:         make(map[string]*driverWrap),
+		close:           make(chan struct{}),
 	}
 }
 
@@ -28,11 +29,12 @@ func GetService() *Service {
 }
 
 type Service struct {
-	keepalive    time.Duration
-	readInterval time.Duration
-	drivers      map[string]*driverWrap
-	lock         sync.Mutex
-	close        chan struct{}
+	keepalive       time.Duration
+	connectInterval time.Duration
+	readInterval    time.Duration
+	drivers         map[string]*driverWrap
+	lock            sync.Mutex
+	close           chan struct{}
 }
 
 func Run() {
@@ -40,6 +42,7 @@ func Run() {
 
 	device.GetService().SlotReset("")
 
+	go _service.connect()
 	go _service.free()
 	go _service.read()
 }
@@ -126,39 +129,11 @@ func (c *Service) Write(tags []device.Tag) error {
 		return nil
 	}
 
-	if d, ok := _drivers[slot.Driver]; ok {
-		driver, err := d.Connect(slot.Params)
-		if err != nil {
-			return err
-		}
-
-		tags, err := device.GetService().ListTagStatusOnAndTypeIO(slot.ID)
-		if err != nil {
-			return err
-		}
-
-		dw := &driverWrap{
-			driver:  driver,
-			lastUse: time.Now(),
-			tags:    tags,
-		}
-
-		go func() {
-			err := dw.write(tags)
-			if err != nil {
-				log.Suger.Error(err)
-				c.Reset(slotId)
-			}
-		}()
-
-		c.drivers[slotId] = dw
-	}
-
 	return nil
 }
 
 func (c *Service) free() {
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(c.connectInterval)
 	for {
 		select {
 		case <-c.close:
@@ -188,11 +163,6 @@ func (c *Service) read() {
 			ticker.Stop()
 			return
 		case <-ticker.C:
-			if err := c.connect(); err != nil {
-				log.Suger.Errorf("c.connect(): %s", err)
-				continue
-			}
-
 			c.lock.Lock()
 
 			for slotId, driver := range c.drivers {
@@ -215,43 +185,52 @@ func (c *Service) read() {
 	}
 }
 
-func (c *Service) connect() error {
-	slots, err := device.GetService().ListSlotStatusOn()
-	if err != nil {
-		return err
-	}
-	// fmt.Println(slots)
-
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	for _, slot := range slots {
-		if _, ok := c.drivers[slot.ID]; ok {
-			continue
-		}
-
-		if d, ok := _drivers[slot.Driver]; ok {
-			driver, err := d.Connect(slot.Params)
+func (c *Service) connect() {
+	ticker := time.NewTicker(c.readInterval)
+	for {
+		select {
+		case <-c.close:
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			slots, err := device.GetService().ListSlotStatusOn()
 			if err != nil {
-				return err
+				log.Suger.Error(err)
+				continue
 			}
 
-			device.GetService().SlotOnline(slot.ID)
+			for _, slot := range slots {
+				c.lock.Lock()
+				defer c.lock.Unlock()
 
-			tags, err := device.GetService().ListTagStatusOnAndTypeIO(slot.ID)
-			if err != nil {
-				return err
+				if _, ok := c.drivers[slot.ID]; ok {
+					continue
+				}
+
+				if d, ok := _drivers[slot.Driver]; ok {
+					driver, err := d.Connect(slot.Params)
+					if err != nil {
+						log.Suger.Error(err)
+						continue
+					}
+
+					device.GetService().SlotOnline(slot.ID)
+
+					tags, err := device.GetService().ListTagStatusOnAndTypeIO(slot.ID)
+					if err != nil {
+						log.Suger.Error(err)
+						continue
+					}
+
+					dw := &driverWrap{
+						driver:  driver,
+						lastUse: time.Now(),
+						tags:    tags,
+					}
+
+					c.drivers[slot.ID] = dw
+				}
 			}
-
-			dw := &driverWrap{
-				driver:  driver,
-				lastUse: time.Now(),
-				tags:    tags,
-			}
-
-			c.drivers[slot.ID] = dw
 		}
 	}
-
-	return nil
 }
