@@ -200,36 +200,38 @@ func (c *Service) connect() {
 			}
 
 			for _, slot := range slots {
-				c.lock.Lock()
-				defer c.lock.Unlock()
+				func(slot device.Slot) {
+					c.lock.Lock()
+					defer c.lock.Unlock()
 
-				if _, ok := c.drivers[slot.ID]; ok {
-					continue
-				}
-
-				if d, ok := _drivers[slot.Driver]; ok {
-					driver, err := d.Connect(slot.Params)
-					if err != nil {
-						log.Suger.Error(err)
-						continue
+					if _, ok := c.drivers[slot.ID]; ok {
+						return
 					}
 
-					device.GetService().SlotOnline(slot.ID)
+					if d, ok := _drivers[slot.Driver]; ok {
+						driver, err := d.Connect(slot.Params)
+						if err != nil {
+							log.Suger.Error(err)
+							return
+						}
 
-					tags, err := device.GetService().ListTagStatusOnAndTypeIO(slot.ID)
-					if err != nil {
-						log.Suger.Error(err)
-						continue
+						device.GetService().SlotOnline(slot.ID)
+
+						tags, err := device.GetService().ListTagStatusOnAndTypeIO(slot.ID)
+						if err != nil {
+							log.Suger.Error(err)
+							return
+						}
+
+						dw := &driverWrap{
+							driver:  driver,
+							lastUse: time.Now(),
+							tags:    tags,
+						}
+
+						c.drivers[slot.ID] = dw
 					}
-
-					dw := &driverWrap{
-						driver:  driver,
-						lastUse: time.Now(),
-						tags:    tags,
-					}
-
-					c.drivers[slot.ID] = dw
-				}
+				}(slot)
 			}
 		}
 	}
