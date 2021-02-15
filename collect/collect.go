@@ -90,10 +90,10 @@ func (c *Service) Write(tags []device.Tag) error {
 		return nil
 	}
 
-	slotId := tags[0].SlotId
+	slotID := tags[0].SlotID
 
 	for _, tag := range tags {
-		if tag.SlotId != slotId {
+		if tag.SlotID != slotID {
 			return errors.New("the tag to write to must be the same slot")
 		}
 
@@ -106,7 +106,7 @@ func (c *Service) Write(tags []device.Tag) error {
 		}
 	}
 
-	slot, err := device.GetService().GetSlot(slotId)
+	slot, err := device.GetService().GetSlot(slotID)
 	if err != nil {
 		return err
 	}
@@ -117,12 +117,12 @@ func (c *Service) Write(tags []device.Tag) error {
 
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	if dw, ok := c.drivers[slotId]; ok {
+	if dw, ok := c.drivers[slotID]; ok {
 		go func() {
 			err := dw.write(tags)
 			if err != nil {
 				log.Suger.Error(err)
-				c.Reset(slotId)
+				c.Reset(slotID)
 			}
 		}()
 

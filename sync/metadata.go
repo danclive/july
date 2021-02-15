@@ -98,7 +98,7 @@ func pullSlots(params, recv nson.Message) nson.Message {
 }
 
 func pullSlot(params, recv nson.Message) nson.Message {
-	slotId, err := params.GetString("slotId")
+	slotID, err := params.GetString("slotID")
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(400),
@@ -106,7 +106,7 @@ func pullSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot, err := device.GetService().GetSlot(slotId)
+	slot, err := device.GetService().GetSlot(slotID)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -136,7 +136,7 @@ func pullSlot(params, recv nson.Message) nson.Message {
 }
 
 func pullTags(params, recv nson.Message) nson.Message {
-	slotId, err := params.GetString("slotId")
+	slotID, err := params.GetString("slotID")
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(400),
@@ -144,7 +144,7 @@ func pullTags(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tags, err := device.GetService().ListTag(slotId)
+	tags, err := device.GetService().ListTag(slotID)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -167,7 +167,7 @@ func pullTags(params, recv nson.Message) nson.Message {
 }
 
 func pullTag(params, recv nson.Message) nson.Message {
-	tagId, err := params.GetString("tagId")
+	tagID, err := params.GetString("tagID")
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(400),
@@ -175,7 +175,7 @@ func pullTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag, err := device.GetService().GetTag(tagId)
+	tag, err := device.GetService().GetTag(tagID)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -374,7 +374,7 @@ func pushSlot(params, recv nson.Message) nson.Message {
 }
 
 func deleteSlot(params, recv nson.Message) nson.Message {
-	slotId, err := params.GetString("slotId")
+	slotID, err := params.GetString("slotID")
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(400),
@@ -382,7 +382,7 @@ func deleteSlot(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	slot, err := device.GetService().GetSlot(slotId)
+	slot, err := device.GetService().GetSlot(slotID)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),
@@ -467,7 +467,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 	NEW:
 		tag2 := device.Tag{
 			ID:         tags[i].ID,
-			SlotId:     tags[i].SlotId,
+			SlotID:     tags[i].SlotID,
 			Name:       tags[i].Name,
 			Desc:       tags[i].Desc,
 			Unit:       tags[i].Unit,
@@ -562,7 +562,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 	NEW:
 		tag3 := device.Tag{
 			ID:         tag.ID,
-			SlotId:     tag.SlotId,
+			SlotID:     tag.SlotID,
 			Name:       tag.Name,
 			Desc:       tag.Desc,
 			Unit:       tag.Unit,
@@ -605,7 +605,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 }
 
 func deleteTag(params, recv nson.Message) nson.Message {
-	tagId, err := params.GetString("tagId")
+	tagID, err := params.GetString("tagID")
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(400),
@@ -613,7 +613,7 @@ func deleteTag(params, recv nson.Message) nson.Message {
 		}
 	}
 
-	tag, err := device.GetService().GetTag(tagId)
+	tag, err := device.GetService().GetTag(tagID)
 	if err != nil {
 		return nson.Message{
 			consts.CODE:  nson.I32(500),

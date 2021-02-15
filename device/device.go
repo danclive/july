@@ -31,7 +31,7 @@ func (*Slot) TableName() string {
 
 type Tag struct {
 	ID         string      `xorm:"pk 'id'" json:"id"`
-	SlotId     string      `xorm:"slot_id" json:"slot_id"`
+	SlotID     string      `xorm:"slot_id" json:"slot_id"`
 	Name       string      `xorm:"'name'" json:"name"`
 	Desc       string      `xorm:"'desc'" json:"desc"`
 	Unit       string      `xorm:"'unit'" json:"unit"`       // 数据单位

@@ -112,13 +112,13 @@ func (s *Service) DeleteSlot(params *Slot) error {
 	session := s.NewSession()
 	defer session.Close()
 
-	_, err = session.ID(params.ID).Delete(params)
+	_, err = session.ID(params.ID).Delete(&Slot{})
 	if err != nil {
 		session.Rollback()
 		return err
 	}
 
-	_, err = session.Delete(&Tag{SlotId: params.ID})
+	_, err = session.Delete(&Tag{SlotID: params.ID})
 	if err != nil {
 		session.Rollback()
 		return err
@@ -138,7 +138,7 @@ func (s *Service) CreateTag(params *Tag) (bool, error) {
 		params.ID = util.RandomID()
 	}
 
-	if params.SlotId == "" {
+	if params.SlotID == "" {
 		return false, errors.New("插槽 ID 不能为空")
 	}
 
@@ -177,7 +177,7 @@ func (s *Service) CreateTag(params *Tag) (bool, error) {
 	_, err := s.InsertOne(params)
 
 	if s.collect != nil {
-		s.collect.Reset(params.SlotId)
+		s.collect.Reset(params.SlotID)
 	}
 
 	return true, err
@@ -187,17 +187,17 @@ func (s *Service) UpdateTag(params *Tag) (bool, error) {
 	_, err := s.ID(params.ID).Update(params)
 
 	if s.collect != nil {
-		s.collect.Reset(params.SlotId)
+		s.collect.Reset(params.SlotID)
 	}
 
 	return true, err
 }
 
 func (s *Service) DeleteTag(params *Tag) error {
-	_, err := s.ID(params.ID).Delete(params)
+	_, err := s.ID(params.ID).Delete(&Tag{})
 
 	if s.collect != nil {
-		s.collect.Reset(params.SlotId)
+		s.collect.Reset(params.SlotID)
 	}
 
 	return err

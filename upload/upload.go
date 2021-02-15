@@ -93,7 +93,7 @@ func (s *Service) run(interval int) {
 						continue
 					}
 
-					k, err := nson.MessageIdFromHex(tags[i].Id)
+					k, err := nson.MessageIdFromHex(tags[i].ID)
 					if err != nil {
 						continue
 					}
