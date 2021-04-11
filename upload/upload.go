@@ -6,12 +6,11 @@ import (
 	"time"
 
 	"github.com/danclive/july/cache"
-	"github.com/danclive/july/consts"
 	"github.com/danclive/july/device"
 	"github.com/danclive/july/log"
-	"github.com/danclive/july/mqtt"
 	"github.com/danclive/july/mqttc"
-	"github.com/danclive/july/util"
+	"github.com/danclive/march/consts"
+	"github.com/danclive/march/packet"
 	"github.com/danclive/nson-go"
 )
 
@@ -38,7 +37,7 @@ func GetService() *Service {
 
 func Run(interval int) {
 	once.Do(func() {
-		log.Suger.Info("run store")
+		log.Suger.Info("run upload")
 		go _service.run(interval)
 	})
 }
@@ -84,7 +83,7 @@ func (s *Service) run(interval int) {
 
 				log.Suger.Debugf("Upload tags: %v", len(tags))
 
-				data := nson.Array{}
+				array := nson.Array{}
 
 				for i := 0; i < len(tags); i++ {
 					err := cache.GetValue(&tags[i])
@@ -98,24 +97,27 @@ func (s *Service) run(interval int) {
 						continue
 					}
 
-					data.Push(k)
-					data.Push(tags[i].Value)
+					array.Push(k)
+					array.Push(tags[i].Value)
 				}
 
-				if len(data) == 0 {
+				if len(array) == 0 {
 					return
 				}
 
-				msg := nson.Message{
-					"data": data,
-				}
-
-				flags := mqtt.FORMAT_NSOM & mqtt.DEVICE_GATEWAY
+				pack := packet.NewPacket()
+				pack.Header.SetContextType(packet.ContextTypeNson)
+				pack.Header.SetExt(1)
 
 				buffer := new(bytes.Buffer)
-				util.WriteUint16(flags, buffer)
 
-				err = msg.Encode(buffer)
+				err = pack.Encode(buffer)
+				if err != nil {
+					log.Suger.Error(err)
+					return
+				}
+
+				err = array.Encode(buffer)
 				if err != nil {
 					log.Suger.Error(err)
 					return

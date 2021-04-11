@@ -12,12 +12,15 @@ type Slot struct {
 	ID         string      `xorm:"pk 'id'" json:"id"`
 	Name       string      `xorm:"'name'" json:"name"`
 	Desc       string      `xorm:"'desc'" json:"desc"`
-	Model      string      `xorm:"'model'" json:"model"`   // 型号
-	Driver     string      `xorm:"'driver'" json:"driver"` // 驱动 S7-TCP, MODBUS-TCP, MQTT
-	Params     string      `xorm:"'params'" json:"params"` // 参数
-	LinkStatus int32       `xorm:"'link'" json:"link"`     // 连接状态，1: ON，-1: OFF
-	Fault      int32       `xorm:"'fault'" json:"fault"`   // 故障状态，1: 故障，-1：正常
-	Status     int32       `xorm:"'status'" json:"status"` // 状态 1: ON，-1: OFF
+	Model      string      `xorm:"'model'" json:"model"`       // 型号
+	Driver     string      `xorm:"'driver'" json:"driver"`     // 驱动 S7-TCP, MODBUS-TCP, MQTT
+	Params     string      `xorm:"'params'" json:"params"`     // 参数
+	Config     string      `xorm:"'cfg'" json:"cfg"`           // 配置
+	ConfigFile string      `xorm:"'cfg_file'" json:"cfg_file"` // 配置文件
+	LinkStatus int32       `xorm:"'link'" json:"link"`         // 连接状态，1: ON，-1: OFF
+	Fault      int32       `xorm:"'fault'" json:"fault"`       // 故障状态，1: 故障，-1：正常
+	Update     int32       `xorm:"'update'" json:"update"`     // 更新状态，1: 已更新，-1：未更新
+	Status     int32       `xorm:"'status'" json:"status"`     // 状态 1: ON，-1: OFF
 	Order      int32       `xorm:"'order'" json:"order"`
 	Version    int32       `xorm:"version" json:"version"`
 	DeletedAt  util.MyTime `xorm:"deleted" json:"-"`
@@ -30,26 +33,27 @@ func (*Slot) TableName() string {
 }
 
 type Tag struct {
-	ID         string      `xorm:"pk 'id'" json:"id"`
-	SlotID     string      `xorm:"slot_id" json:"slot_id"`
-	Name       string      `xorm:"'name'" json:"name"`
-	Desc       string      `xorm:"'desc'" json:"desc"`
-	Unit       string      `xorm:"'unit'" json:"unit"`       // 数据单位
-	Type       string      `xorm:"'type'" json:"type"`       // 标签类型 MEM，IO，CFG
-	DataType   string      `xorm:"'dtype'" json:"dtype"`     // 数据类型
-	Format     string      `xorm:"'format'" json:"format"`   // 数据格式化
-	Address    string      `xorm:"'address'" json:"address"` // 寄存器
-	AccessMode int32       `xorm:"'access'" json:"access"`   // 读写数据模式， 1: RW，-1: RO
-	Upload     int32       `xorm:"'upload'" json:"upload"`   // 上传数据，1: ON，-1: OFF
-	Save       int32       `xorm:"'save'" json:"save"`       // 保存数据，1: ON，-1: OFF
-	Visible    int32       `xorm:"'visible'" json:"visible"` // 可见性，1: ON，-1: OFF
-	Status     int32       `xorm:"'status'" json:"status"`   // 状态 1: ON，-1: OFF
-	Order      int32       `xorm:"'order'" json:"order"`     // 排序
-	Version    int32       `xorm:"version" json:"version"`
-	Value      nson.Value  `xorm:"-" json:"value"`
-	DeletedAt  util.MyTime `xorm:"deleted" json:"-"`
-	CreatedAt  util.MyTime `xorm:"created" json:"created"`
-	UpdatedAt  util.MyTime `xorm:"updated" json:"updated"`
+	ID        string      `xorm:"pk 'id'" json:"id"`
+	SlotID    string      `xorm:"slot_id" json:"slot_id"`
+	Name      string      `xorm:"'name'" json:"name"`
+	Desc      string      `xorm:"'desc'" json:"desc"`
+	Unit      string      `xorm:"'unit'" json:"unit"`       // 数据单位
+	Type      string      `xorm:"'type'" json:"type"`       // 标签类型 MEM，IO，CFG
+	DataType  string      `xorm:"'dtype'" json:"dtype"`     // 数据类型
+	Format    string      `xorm:"'format'" json:"format"`   // 数据格式化
+	Address   string      `xorm:"'address'" json:"address"` // 寄存器
+	Config    string      `xorm:"'cfg'" json:"cfg"`         // 配置
+	RW        int32       `xorm:"'rw'" json:"rw"`           // 读写数据模式， 1: RW，-1: RO
+	Upload    int32       `xorm:"'upload'" json:"upload"`   // 上传数据，1: ON，-1: OFF
+	Save      int32       `xorm:"'save'" json:"save"`       // 保存数据，1: ON，-1: OFF
+	Visible   int32       `xorm:"'visible'" json:"visible"` // 可见性，1: ON，-1: OFF
+	Status    int32       `xorm:"'status'" json:"status"`   // 状态 1: ON，-1: OFF
+	Order     int32       `xorm:"'order'" json:"order"`     // 排序
+	Version   int32       `xorm:"version" json:"version"`
+	Value     nson.Value  `xorm:"-" json:"value"`
+	DeletedAt util.MyTime `xorm:"deleted" json:"-"`
+	CreatedAt util.MyTime `xorm:"created" json:"created"`
+	UpdatedAt util.MyTime `xorm:"updated" json:"updated"`
 }
 
 func (*Tag) TableName() string {
@@ -121,4 +125,19 @@ func (t *Tag) FormatValue() {
 			}
 		}
 	}
+}
+
+func TypeSize(t string) int {
+	switch t {
+	case TypeBool, TypeI8, TypeU8:
+		return 1
+	case TypeI16, TypeU16:
+		return 2
+	case TypeI32, TypeU32, TypeF32:
+		return 4
+	case TypeI64, TypeU64, TypeF64:
+		return 8
+	}
+
+	return 0
 }

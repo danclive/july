@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 
 	"github.com/danclive/july/collect"
-	"github.com/danclive/july/consts"
 	"github.com/danclive/july/device"
 	"github.com/danclive/july/log"
 	"github.com/danclive/july/util"
+	"github.com/danclive/march/consts"
 	"github.com/danclive/mqtt"
 	"github.com/danclive/mqtt/packets"
 	"github.com/danclive/nson-go"
@@ -86,7 +86,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 					}
 
 					for k, v := range dataMessage {
-						tag, err := device.GetService().GetTagBySlotIdAndAddress(clientId, k)
+						tag, err := device.GetService().GetTagBySlotIDAndAddress(clientId, k)
 						if err != nil {
 							log.Suger.Errorf("GetTagByName(k): %s", err)
 							return
@@ -185,7 +185,7 @@ func (m *MqttRecv) msgArrived(client mqtt.Client, msg packets.Message) (valid bo
 			// fmt.Println(clientId)
 
 			for k, v := range data {
-				tag, err := device.GetService().GetTagBySlotIdAndAddress(clientId, k)
+				tag, err := device.GetService().GetTagBySlotIDAndAddress(clientId, k)
 				if err != nil {
 					log.Suger.Errorf("SlotService{}.GetTagByName(k): %s", err)
 					return

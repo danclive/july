@@ -70,7 +70,7 @@ func (s *Service) GetTagByName(name string) (*device.Tag, error) {
 			return nil, err
 		}
 
-		tag, err := device.GetService().GetTagBySlotIdAndName(slot.ID, split[1])
+		tag, err := device.GetService().GetTagBySlotIDAndName(slot.ID, split[1])
 		if err != nil {
 			return nil, err
 		}
@@ -174,7 +174,7 @@ func (s *Service) SetValueByName(name string, value nson.Value) error {
 			return err
 		}
 
-		tag, err := device.GetService().GetTagBySlotIdAndName(slot.ID, split[1])
+		tag, err := device.GetService().GetTagBySlotIDAndName(slot.ID, split[1])
 		if err != nil {
 			return err
 		}

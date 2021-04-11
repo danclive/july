@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/danclive/july/consts"
 	"github.com/danclive/july/device"
 	"github.com/danclive/july/log"
+	"github.com/danclive/march/consts"
 )
 
 var _service *Service
@@ -97,8 +97,8 @@ func (c *Service) Write(tags []device.Tag) error {
 			return errors.New("the tag to write to must be the same slot")
 		}
 
-		if tag.AccessMode != consts.RW {
-			return errors.New("tag.AccessMode != RW")
+		if tag.RW != consts.ON {
+			return errors.New("tag.RW != consts.ON")
 		}
 
 		if tag.Value == nil {
@@ -209,7 +209,7 @@ func (c *Service) connect() {
 					}
 
 					if d, ok := _drivers[slot.Driver]; ok {
-						driver, err := d.Connect(slot.Params)
+						driver, err := d.Connect(slot)
 						if err != nil {
 							log.Suger.Error(err)
 							return

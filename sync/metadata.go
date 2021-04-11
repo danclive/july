@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/danclive/july/consts"
 	"github.com/danclive/july/device"
 	"github.com/danclive/july/log"
+	"github.com/danclive/march/consts"
 	"github.com/danclive/nson-go"
 	"github.com/danclive/queen-go/client"
 )
@@ -238,6 +238,8 @@ func pushSlots(params, recv nson.Message) nson.Message {
 			slot.Model = slots[i].Model
 			slot.Driver = slots[i].Driver
 			slot.Params = slots[i].Params
+			slot.Config = slots[i].Config
+			slot.ConfigFile = slots[i].ConfigFile
 			slot.Status = slots[i].Status
 			slot.Order = slots[i].Order
 
@@ -254,14 +256,16 @@ func pushSlots(params, recv nson.Message) nson.Message {
 
 	NEW:
 		slot2 := device.Slot{
-			ID:     slots[i].ID,
-			Name:   slots[i].Name,
-			Desc:   slots[i].Desc,
-			Model:  slots[i].Model,
-			Driver: slots[i].Driver,
-			Params: slots[i].Params,
-			Status: slots[i].Status,
-			Order:  slots[i].Order,
+			ID:         slots[i].ID,
+			Name:       slots[i].Name,
+			Desc:       slots[i].Desc,
+			Model:      slots[i].Model,
+			Driver:     slots[i].Driver,
+			Params:     slots[i].Params,
+			Config:     slots[i].Config,
+			ConfigFile: slots[i].ConfigFile,
+			Status:     slots[i].Status,
+			Order:      slots[i].Order,
 		}
 
 		_, err = device.GetService().CreateSlot(&slot2)
@@ -323,6 +327,8 @@ func pushSlot(params, recv nson.Message) nson.Message {
 		slot2.Model = slot.Model
 		slot2.Driver = slot.Driver
 		slot2.Params = slot.Params
+		slot2.Config = slot.Config
+		slot2.ConfigFile = slot.ConfigFile
 		slot2.Status = slot.Status
 		slot2.Order = slot.Order
 
@@ -337,14 +343,16 @@ func pushSlot(params, recv nson.Message) nson.Message {
 
 	NEW:
 		slot3 := device.Slot{
-			ID:     slot.ID,
-			Name:   slot.Name,
-			Desc:   slot.Desc,
-			Model:  slot.Model,
-			Driver: slot.Driver,
-			Params: slot.Params,
-			Status: slot.Status,
-			Order:  slot.Order,
+			ID:         slot.ID,
+			Name:       slot.Name,
+			Desc:       slot.Desc,
+			Model:      slot.Model,
+			Driver:     slot.Driver,
+			Params:     slot.Params,
+			Config:     slot.Config,
+			ConfigFile: slot.ConfigFile,
+			Status:     slot.Status,
+			Order:      slot.Order,
 		}
 
 		_, err = device.GetService().CreateSlot(&slot3)
@@ -446,7 +454,8 @@ func pushTags(params, recv nson.Message) nson.Message {
 			tag.DataType = tags[i].DataType
 			tag.Format = tags[i].Format
 			tag.Address = tags[i].Address
-			tag.AccessMode = tags[i].AccessMode
+			tag.Config = tags[i].Config
+			tag.RW = tags[i].RW
 			tag.Upload = tags[i].Upload
 			tag.Save = tags[i].Save
 			tag.Visible = tags[i].Visible
@@ -466,21 +475,22 @@ func pushTags(params, recv nson.Message) nson.Message {
 
 	NEW:
 		tag2 := device.Tag{
-			ID:         tags[i].ID,
-			SlotID:     tags[i].SlotID,
-			Name:       tags[i].Name,
-			Desc:       tags[i].Desc,
-			Unit:       tags[i].Unit,
-			Type:       tags[i].Type,
-			DataType:   tags[i].DataType,
-			Format:     tags[i].Format,
-			Address:    tags[i].Address,
-			AccessMode: tags[i].AccessMode,
-			Upload:     tags[i].Upload,
-			Save:       tags[i].Save,
-			Visible:    tags[i].Visible,
-			Status:     tags[i].Status,
-			Order:      tags[i].Order,
+			ID:       tags[i].ID,
+			SlotID:   tags[i].SlotID,
+			Name:     tags[i].Name,
+			Desc:     tags[i].Desc,
+			Unit:     tags[i].Unit,
+			Type:     tags[i].Type,
+			DataType: tags[i].DataType,
+			Format:   tags[i].Format,
+			Address:  tags[i].Address,
+			Config:   tags[i].Config,
+			RW:       tags[i].RW,
+			Upload:   tags[i].Upload,
+			Save:     tags[i].Save,
+			Visible:  tags[i].Visible,
+			Status:   tags[i].Status,
+			Order:    tags[i].Order,
 		}
 
 		_, err = device.GetService().CreateTag(&tag2)
@@ -543,7 +553,8 @@ func pushTag(params, recv nson.Message) nson.Message {
 		tag2.DataType = tag.DataType
 		tag2.Format = tag.Format
 		tag2.Address = tag.Address
-		tag2.AccessMode = tag.AccessMode
+		tag2.Config = tag.Config
+		tag2.RW = tag.RW
 		tag2.Upload = tag.Upload
 		tag2.Save = tag.Save
 		tag2.Visible = tag.Visible
@@ -561,21 +572,22 @@ func pushTag(params, recv nson.Message) nson.Message {
 
 	NEW:
 		tag3 := device.Tag{
-			ID:         tag.ID,
-			SlotID:     tag.SlotID,
-			Name:       tag.Name,
-			Desc:       tag.Desc,
-			Unit:       tag.Unit,
-			Type:       tag.Type,
-			DataType:   tag.DataType,
-			Format:     tag.Format,
-			Address:    tag.Address,
-			AccessMode: tag.AccessMode,
-			Upload:     tag.Upload,
-			Save:       tag.Save,
-			Visible:    tag.Visible,
-			Status:     tag.Status,
-			Order:      tag.Order,
+			ID:       tag.ID,
+			SlotID:   tag.SlotID,
+			Name:     tag.Name,
+			Desc:     tag.Desc,
+			Unit:     tag.Unit,
+			Type:     tag.Type,
+			DataType: tag.DataType,
+			Format:   tag.Format,
+			Address:  tag.Address,
+			Config:   tag.Config,
+			RW:       tag.RW,
+			Upload:   tag.Upload,
+			Save:     tag.Save,
+			Visible:  tag.Visible,
+			Status:   tag.Status,
+			Order:    tag.Order,
 		}
 
 		_, err = device.GetService().CreateTag(&tag3)

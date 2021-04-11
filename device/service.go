@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/danclive/july/consts"
 	"github.com/danclive/july/log"
 	"github.com/danclive/july/util"
+	"github.com/danclive/march/consts"
 	"xorm.io/xorm"
 )
 
@@ -32,7 +32,7 @@ type Service struct {
 }
 
 type Collect interface {
-	Reset(slotId string)
+	Reset(slotID string)
 }
 
 func (s *Service) Sync(force bool) error {
@@ -91,6 +91,10 @@ func (s *Service) CreateSlot(params *Slot) (bool, error) {
 		params.Fault = consts.OFF
 	}
 
+	if params.Update == 0 {
+		params.Update = consts.OFF
+	}
+
 	_, err := s.InsertOne(params)
 
 	return true, err
@@ -133,6 +137,13 @@ func (s *Service) DeleteSlot(params *Slot) error {
 	return err
 }
 
+func (s *Service) DestorySlots() error {
+	item := Slot{}
+	_, err := s.Engine.Exec(fmt.Sprintf("DELETE FROM %v", item.TableName()))
+	s.Engine.ClearCache(&item)
+	return err
+}
+
 func (s *Service) CreateTag(params *Tag) (bool, error) {
 	if params.ID == "" {
 		params.ID = util.RandomID()
@@ -154,8 +165,8 @@ func (s *Service) CreateTag(params *Tag) (bool, error) {
 		params.DataType = TypeI32
 	}
 
-	if params.AccessMode == 0 {
-		params.AccessMode = consts.RO
+	if params.RW == 0 {
+		params.RW = consts.OFF
 	}
 
 	if params.Status == 0 {
@@ -203,6 +214,19 @@ func (s *Service) DeleteTag(params *Tag) error {
 	return err
 }
 
+func (s *Service) DestoryTags(slotID string) error {
+	item := Tag{}
+	var err error
+	if slotID == "" {
+		_, err = s.Engine.Exec(fmt.Sprintf("DELETE FROM %v", item.TableName()))
+	} else {
+		_, err = s.Engine.Exec(fmt.Sprintf("DELETE FROM %v WHERE slot_id = '%v'", item.TableName(), slotID))
+	}
+
+	s.Engine.ClearCache(&item)
+	return err
+}
+
 // list
 
 func (s *Service) ListSlot() ([]Slot, error) {
@@ -243,10 +267,10 @@ func (s *Service) ListSlot2(params util.ListParams) ([]Slot, int64, error) {
 	return items, total, nil
 }
 
-func (s *Service) ListTag(slotId string) ([]Tag, error) {
+func (s *Service) ListTag(slotID string) ([]Tag, error) {
 	items := make([]Tag, 0)
 
-	err := s.Where("slot_id = ?", slotId).Find(&items)
+	err := s.Where("slot_id = ?", slotID).Find(&items)
 	if err != nil {
 		return nil, err
 	}
@@ -254,10 +278,10 @@ func (s *Service) ListTag(slotId string) ([]Tag, error) {
 	return items, nil
 }
 
-func (s *Service) ListTagStatusOnAndTypeIO(slotId string) ([]Tag, error) {
+func (s *Service) ListTagStatusOnAndTypeIO(slotID string) ([]Tag, error) {
 	items := make([]Tag, 0)
 
-	err := s.Where("slot_id = ?", slotId).And("type = ?", TypeIO).And("status = ?", consts.ON).Find(&items)
+	err := s.Where("slot_id = ?", slotID).And("type = ?", TypeIO).And("status = ?", consts.ON).Find(&items)
 	if err != nil {
 		return nil, err
 	}
@@ -283,6 +307,17 @@ func (s *Service) ListTagAndSave() ([]Tag, error) {
 	return items, nil
 }
 
+func (s *Service) ListTagAndUploadBySlot(slotID string) ([]Tag, error) {
+	items := make([]Tag, 0)
+
+	err := s.Where("slot_id = ?", slotID).And("status = ?", consts.ON).And("upload = ?", consts.ON).Find(&items)
+	if err != nil {
+		return nil, err
+	}
+
+	return items, nil
+}
+
 func (s *Service) ListTagAndUpload() ([]Tag, error) {
 	slots, err := s.ListSlotStatusOn()
 	if err != nil {
@@ -303,29 +338,29 @@ func (s *Service) ListTagAndUpload() ([]Tag, error) {
 
 type ListTagParams struct {
 	util.ListParams
-	SlotId string `form:"slot_id" json:"slot_id"`
+	SlotID string `form:"slot_id" json:"slot_id"`
 }
 
 func (s *Service) ListTag2(params ListTagParams) ([]Tag, int64, error) {
 	items := make([]Tag, 0)
 	total := int64(0)
 	if params.Search != "" {
-		err := s.Where("slot_id = ?", params.SlotId).And(fmt.Sprintf("name LIKE '%%%s%%'", params.Search)).Limit(params.Limit, params.Start).Desc("order").Find(&items)
+		err := s.Where("slot_id = ?", params.SlotID).And(fmt.Sprintf("name LIKE '%%%s%%'", params.Search)).Limit(params.Limit, params.Start).Desc("order").Find(&items)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		total, err = s.Where("slot_id = ?", params.SlotId).And(fmt.Sprintf("name LIKE '%%%s%%'", params.Search)).Count(&Tag{})
+		total, err = s.Where("slot_id = ?", params.SlotID).And(fmt.Sprintf("name LIKE '%%%s%%'", params.Search)).Count(&Tag{})
 		if err != nil {
 			return nil, 0, err
 		}
 	} else {
-		err := s.Where("slot_id = ?", params.SlotId).Limit(params.Limit, params.Start).Desc("order").Find(&items)
+		err := s.Where("slot_id = ?", params.SlotID).Limit(params.Limit, params.Start).Desc("order").Find(&items)
 		if err != nil {
 			return nil, 0, err
 		}
 
-		total, err = s.Where("slot_id = ?", params.SlotId).Count(&Tag{})
+		total, err = s.Where("slot_id = ?", params.SlotID).Count(&Tag{})
 		if err != nil {
 			return nil, 0, err
 		}
@@ -408,9 +443,9 @@ func (s *Service) GetTagByName(tagName string) (*Tag, error) {
 	return nil, nil
 }
 
-func (s *Service) GetTagBySlotIdAndName(slotId, name string) (*Tag, error) {
+func (s *Service) GetTagBySlotIDAndName(slotID, name string) (*Tag, error) {
 	var item Tag
-	has, err := s.Where("slot_id = ?", slotId).And("name = ?", name).Get(&item)
+	has, err := s.Where("slot_id = ?", slotID).And("name = ?", name).Get(&item)
 	if err != nil {
 		return nil, err
 	}
@@ -422,9 +457,9 @@ func (s *Service) GetTagBySlotIdAndName(slotId, name string) (*Tag, error) {
 	return nil, nil
 }
 
-func (s *Service) GetTagBySlotIdAndAddress(slotId, address string) (*Tag, error) {
+func (s *Service) GetTagBySlotIDAndAddress(slotID, address string) (*Tag, error) {
 	var item Tag
-	has, err := s.Where("slot_id = ?", slotId).And("address = ?", address).Get(&item)
+	has, err := s.Where("slot_id = ?", slotID).And("address = ?", address).Get(&item)
 	if err != nil {
 		return nil, err
 	}
@@ -523,9 +558,9 @@ func (s *Service) TagFn(fn string, ids []string) error {
 		case "off_save":
 			tag.Save = consts.OFF
 		case "ro":
-			tag.AccessMode = consts.RO
+			tag.RW = consts.OFF
 		case "rw":
-			tag.AccessMode = consts.RW
+			tag.RW = consts.ON
 		case "on_visible":
 			tag.Visible = consts.ON
 		case "off_visible":

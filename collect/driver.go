@@ -8,7 +8,7 @@ import (
 )
 
 type Driver interface {
-	Connect(params string) (Driver, error)
+	Connect(slot device.Slot) (Driver, error)
 	Close() error
 	Name() string
 	Read([]device.Tag) error

@@ -1,8 +1,10 @@
 package queenc
 
 import (
-	"github.com/danclive/july/consts"
+	"sync"
+
 	"github.com/danclive/july/log"
+	"github.com/danclive/march/consts"
 	"github.com/danclive/nson-go"
 	"github.com/danclive/queen-go/client"
 )
@@ -33,6 +35,7 @@ func GetService() *Service {
 type Service struct {
 	client  *client.Client
 	handles map[string]handle
+	lock    sync.Mutex
 }
 
 type handle struct {
@@ -81,7 +84,11 @@ func (s *Service) onConnect(c *client.Client) {
 func (q *Service) onRecv(c *client.Client, recv client.RecvMessage) {
 	back := recv.Back()
 
-	if handle, ok := q.handles[recv.Ch]; ok {
+	_service.lock.Lock()
+	handle, ok := q.handles[recv.Ch]
+	_service.lock.Unlock()
+
+	if ok && handle.fn != nil {
 		if handle.fn != nil {
 			handle.fn(c, &recv, back)
 		}
@@ -105,7 +112,11 @@ func (q *Service) onRecv(c *client.Client, recv client.RecvMessage) {
 }
 
 func AddHandel(ch string, label []string, share bool, attach bool, fn func(*client.Client, *client.RecvMessage, *client.SendMessage)) {
-	_service.handles[ch] = handle{ch, label, share, attach, fn}
+	if _service == nil {
+		_service.lock.Lock()
+		_service.handles[ch] = handle{ch, label, share, attach, fn}
+		_service.lock.Unlock()
+	}
 }
 
 func GetClient() *client.Client {
