@@ -175,7 +175,9 @@ func (c *Service) read() {
 					//fmt.Println(driver.tags)
 
 					for i := 0; i < len(driver.tags); i++ {
-						CacheSet(driver.tags[i].ID, driver.tags[i].Value)
+						if driver.tags[i].Value != nil {
+							CacheSet(driver.tags[i].ID, driver.tags[i].Value)
+						}
 					}
 				}(slotId, driver)
 			}
@@ -222,6 +224,8 @@ func (c *Service) connect() {
 							log.Suger.Error(err)
 							return
 						}
+
+						// fmt.Printf("%#v", tags[0])
 
 						dw := &driverWrap{
 							driver:  driver,
