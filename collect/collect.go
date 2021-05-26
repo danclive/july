@@ -97,13 +97,15 @@ func (c *Service) Write(tags []device.Tag) error {
 			return errors.New("the tag to write to must be the same slot")
 		}
 
-		if tag.RW != consts.ON {
-			return errors.New("tag.RW != consts.ON")
+		if tag.Access != consts.ON {
+			return errors.New("tag.Access != RW(consts.ON)")
 		}
 
 		if tag.Value == nil {
 			return errors.New("tag.Value == nil")
 		}
+
+		tag.WriteConvert()
 	}
 
 	slot, err := device.GetService().GetSlot(slotID)
@@ -133,13 +135,13 @@ func (c *Service) Write(tags []device.Tag) error {
 }
 
 func (c *Service) free() {
-	ticker := time.NewTicker(c.connectInterval)
 	for {
+		time.Sleep(c.connectInterval)
+
 		select {
 		case <-c.close:
-			ticker.Stop()
 			return
-		case <-ticker.C:
+		default:
 			c.lock.Lock()
 			for k, v := range c.drivers {
 				// 如果一定时间内未使用，释放
@@ -156,13 +158,13 @@ func (c *Service) free() {
 }
 
 func (c *Service) read() {
-	ticker := time.NewTicker(c.readInterval)
 	for {
+		time.Sleep(c.readInterval)
+
 		select {
 		case <-c.close:
-			ticker.Stop()
 			return
-		case <-ticker.C:
+		default:
 			c.lock.Lock()
 
 			for slotId, driver := range c.drivers {
@@ -176,6 +178,9 @@ func (c *Service) read() {
 
 					for i := 0; i < len(driver.tags); i++ {
 						if driver.tags[i].Value != nil {
+
+							driver.tags[i].ReadConvert()
+
 							CacheSet(driver.tags[i].ID, driver.tags[i].Value)
 						}
 					}
@@ -188,13 +193,13 @@ func (c *Service) read() {
 }
 
 func (c *Service) connect() {
-	ticker := time.NewTicker(c.readInterval)
 	for {
+		time.Sleep(c.connectInterval)
+
 		select {
 		case <-c.close:
-			ticker.Stop()
 			return
-		case <-ticker.C:
+		default:
 			slots, err := device.GetService().ListSlotStatusOn()
 			if err != nil {
 				log.Suger.Error(err)
@@ -204,11 +209,13 @@ func (c *Service) connect() {
 			for _, slot := range slots {
 				func(slot device.Slot) {
 					c.lock.Lock()
-					defer c.lock.Unlock()
+					// defer c.lock.Unlock()
 
 					if _, ok := c.drivers[slot.ID]; ok {
+						c.lock.Unlock()
 						return
 					}
+					c.lock.Unlock()
 
 					if d, ok := _drivers[slot.Driver]; ok {
 						driver, err := d.Connect(slot)
@@ -233,7 +240,9 @@ func (c *Service) connect() {
 							tags:    tags,
 						}
 
+						c.lock.Lock()
 						c.drivers[slot.ID] = dw
+						c.lock.Unlock()
 					}
 				}(slot)
 			}

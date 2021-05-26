@@ -70,9 +70,17 @@ func (s *Service) GetTagByName(name string) (*device.Tag, error) {
 			return nil, err
 		}
 
+		if slot == nil {
+			return nil, errors.New("not found")
+		}
+
 		tag, err := device.GetService().GetTagBySlotIDAndName(slot.ID, split[1])
 		if err != nil {
 			return nil, err
+		}
+
+		if tag == nil {
+			return nil, errors.New("not found")
 		}
 
 		err = s.GetValue(tag)
@@ -174,6 +182,10 @@ func (s *Service) SetValueByName(name string, value nson.Value) error {
 			return err
 		}
 
+		if slot == nil {
+			return errors.New("not found")
+		}
+
 		tag, err := device.GetService().GetTagBySlotIDAndName(slot.ID, split[1])
 		if err != nil {
 			return err
@@ -187,7 +199,6 @@ func (s *Service) SetValueByName(name string, value nson.Value) error {
 	}
 
 	tag, err := device.GetService().GetTagByName(name)
-
 	if err != nil {
 		return err
 	}

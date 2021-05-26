@@ -165,8 +165,8 @@ func (s *Service) CreateTag(params *Tag) (bool, error) {
 		params.DataType = TypeI32
 	}
 
-	if params.RW == 0 {
-		params.RW = consts.OFF
+	if params.Access == 0 {
+		params.Access = consts.OFF
 	}
 
 	if params.Status == 0 {
@@ -558,9 +558,9 @@ func (s *Service) TagFn(fn string, ids []string) error {
 		case "off_save":
 			tag.Save = consts.OFF
 		case "ro":
-			tag.RW = consts.OFF
+			tag.Access = consts.OFF
 		case "rw":
-			tag.RW = consts.ON
+			tag.Access = consts.ON
 		case "on_visible":
 			tag.Visible = consts.ON
 		case "off_visible":

@@ -106,7 +106,7 @@ func (s *Service) run(interval int) {
 				}
 
 				pack := packet.NewPacket()
-				pack.Header.SetContextType(packet.ContextTypeNson)
+				pack.Header.SetContentType(packet.ContentTypeNson)
 				pack.Header.SetExt(1)
 
 				buffer := new(bytes.Buffer)

@@ -455,7 +455,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 			tag.Format = tags[i].Format
 			tag.Address = tags[i].Address
 			tag.Config = tags[i].Config
-			tag.RW = tags[i].RW
+			tag.Access = tags[i].Access
 			tag.Upload = tags[i].Upload
 			tag.Save = tags[i].Save
 			tag.Visible = tags[i].Visible
@@ -485,7 +485,7 @@ func pushTags(params, recv nson.Message) nson.Message {
 			Format:   tags[i].Format,
 			Address:  tags[i].Address,
 			Config:   tags[i].Config,
-			RW:       tags[i].RW,
+			Access:   tags[i].Access,
 			Upload:   tags[i].Upload,
 			Save:     tags[i].Save,
 			Visible:  tags[i].Visible,
@@ -554,7 +554,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 		tag2.Format = tag.Format
 		tag2.Address = tag.Address
 		tag2.Config = tag.Config
-		tag2.RW = tag.RW
+		tag2.Access = tag.Access
 		tag2.Upload = tag.Upload
 		tag2.Save = tag.Save
 		tag2.Visible = tag.Visible
@@ -582,7 +582,7 @@ func pushTag(params, recv nson.Message) nson.Message {
 			Format:   tag.Format,
 			Address:  tag.Address,
 			Config:   tag.Config,
-			RW:       tag.RW,
+			Access:   tag.Access,
 			Upload:   tag.Upload,
 			Save:     tag.Save,
 			Visible:  tag.Visible,
