@@ -53,10 +53,10 @@ type Tag struct {
 	Version         int32       `xorm:"version" json:"version"`
 	Convert         int32       `xorm:"'convert'" json:"convert"` // 量程转换，1: ON，-1: OFF
 	ConvertDataType string      `xorm:"'cdtype'" json:"cdtype"`   // 转换后数据类型
-	HLimit          float64     `xorm:"hlimit" json:"hlimit"`     // 工程量上限
-	LLimit          float64     `xorm:"llimit" json:"llimit"`     // 工程量下限
-	HValue          float64     `xorm:"hvalue" json:"hvalue"`     // 量程上限
-	LValue          float64     `xorm:"lvalue" json:"lvalue"`     // 量程下限
+	HLimit          float64     `xorm:"'hlimit'" json:"hlimit"`   // 工程量上限
+	LLimit          float64     `xorm:"'llimit'" json:"llimit"`   // 工程量下限
+	HValue          float64     `xorm:"'hvalue'" json:"hvalue"`   // 量程上限
+	LValue          float64     `xorm:"'lvalue'" json:"lvalue"`   // 量程下限
 	Value           nson.Value  `xorm:"-" json:"value"`
 	DeletedAt       util.MyTime `xorm:"deleted" json:"-"`
 	CreatedAt       util.MyTime `xorm:"created" json:"created"`

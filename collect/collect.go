@@ -173,6 +173,7 @@ func (c *Service) read() {
 					if err != nil {
 						log.Suger.Error(err)
 						c.Reset(slotId)
+						return
 					}
 					//fmt.Println(driver.tags)
 
