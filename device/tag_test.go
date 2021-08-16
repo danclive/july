@@ -1,6 +1,7 @@
 package device
 
 import (
+	"log"
 	"testing"
 
 	"github.com/danclive/march/consts"
@@ -40,4 +41,20 @@ func TestDataTypeConvert(t *testing.T) {
 	tag.LValue = -567
 	tag.ReadConvert()
 	assert.Exactly(t, tag.Value, nson.I32(16372))
+}
+
+func TestDataTypeConvert2(t *testing.T) {
+	tag := Tag{
+		DataType:        TypeF32,
+		Value:           nson.F32(21533),
+		Convert:         consts.ON,
+		ConvertDataType: TypeF32,
+		HLimit:          27736,
+		LLimit:          0,
+		HValue:          300,
+		LValue:          -500,
+	}
+
+	tag.ReadConvert()
+	log.Println(tag.Value)
 }
