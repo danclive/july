@@ -24,8 +24,8 @@ func Connect(file string, debug bool) {
 		engine.Logger().SetLevel(xormlog.LOG_DEBUG)
 	}
 
-	engine.SetMaxOpenConns(5)
-	engine.SetMaxIdleConns(2)
+	// engine.SetMaxOpenConns(5)
+	// engine.SetMaxIdleConns(2)
 
 	// fmt.Printf("%+v/n", engine.DB().Stats())
 

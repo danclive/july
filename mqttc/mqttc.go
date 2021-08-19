@@ -1,7 +1,6 @@
 package mqttc
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -19,12 +18,10 @@ func InitService(config Config) {
 	}
 
 	options.SetAutoReconnect(true)
+	options.SetConnectRetry(true)
 	options.SetClientID(config.ClientId)
 	options.SetUsername(config.User)
 	options.SetPassword(config.Pass)
-	options.SetKeepAlive(time.Duration(config.Keepalive))
-	options.SetMaxReconnectInterval(time.Duration(config.MaxReconnectInterval))
-	options.SetPingTimeout(time.Duration(config.PingTimeout))
 	options.SetProtocolVersion(4)
 
 	options.SetOnConnectHandler(func(mqttclient mqtt.Client) {
@@ -62,15 +59,11 @@ type Service struct {
 }
 
 type Config struct {
-	Addrs                []string
-	ClientId             string
-	User                 string
-	Pass                 string
-	Keepalive            int
-	ConnectTimeout       int
-	MaxReconnectInterval int
-	PingTimeout          int
-	Debug                bool
+	Addrs    []string
+	ClientId string
+	User     string
+	Pass     string
+	Debug    bool
 }
 
 func Connect() {
@@ -111,7 +104,6 @@ func AddHandle(handle func(mqtt.Client)) {
 }
 
 func GetClient() mqtt.Client {
-	fmt.Println(_service)
 	if _service == nil {
 		return nil
 	}

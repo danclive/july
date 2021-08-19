@@ -85,6 +85,9 @@ func (s *Service) run(interval int) {
 
 				array := nson.Array{}
 
+				array.Push(nson.U32(0))
+				array.Push(nson.Bool(true))
+
 				for i := 0; i < len(tags); i++ {
 					err := cache.GetValue(&tags[i])
 					if err != nil {
@@ -106,8 +109,7 @@ func (s *Service) run(interval int) {
 				}
 
 				pack := packet.NewPacket()
-				pack.Header.SetContentType(packet.ContentTypeNson)
-				pack.Header.SetExt(1)
+				pack.Header.SetContentType(1)
 
 				buffer := new(bytes.Buffer)
 
